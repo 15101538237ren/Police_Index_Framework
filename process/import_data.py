@@ -6,9 +6,8 @@ from helpers import pinyin_hash
 
 district_row_no = {"dongcheng":3, "xicheng":4, "chaoyang":5, "haidian":6,"fengtai":7,"shijingshan":8,"daxing":19}
 
-#导入警力数据(输入文件xls的路径(不含中文),输出文件的文件夹,
+#导入警力数据(输入文件xls的路径(不含中文),年,月,开始日期
 def import_police_data(input_file_path , year , month, date_start_day=1):
-    tz=pytz.timezone('Asia/Shanghai')
     file = xlrd.open_workbook(input_file_path)
     file_sheet = file.sheets()
 
@@ -24,6 +23,9 @@ def import_police_data(input_file_path , year , month, date_start_day=1):
                     police.save()
         day_num += 1
     print "import police data to database seccessfully!"
+#导入122事故数据,输入xls路径
+def import_122_incidence_data(input_file_path):
+    pass
     
     
     
