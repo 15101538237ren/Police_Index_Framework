@@ -4,7 +4,7 @@ from django.db import models
 from django.utils import timezone
 from ckeditor.fields import RichTextField
 from django_permanent.models import PermanentModel
-from .helpers import region_hash
+from process.helpers import region_hash
 # Create your models here.
 
 #App违法举报对应的数据库表
