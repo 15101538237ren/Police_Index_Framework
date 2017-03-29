@@ -2,8 +2,9 @@
 
 from models import *
 from helpers import pinyin_hash
-import datetime
+import datetime,math,plotly
 import numpy as np
+import plotly.graph_objs as go
 
 # 输入分钟,按几分钟切割,按duration取整
 def partition_time(minute, duration=10):
@@ -274,12 +275,64 @@ def preprocess_police(start_time, end_time, duration, region, is_week):
         return result_dict
     else:
         return result_dict['0']
+#求乘积之和
+#a,b:输入的两个序列
+#输出:两序列a,b的乘积之和
+def multipl(a,b):
+    sumofab=0.0
+    for i in range(len(a)):
+        temp=a[i]*b[i]
+        sumofab+=temp
+    return sumofab
 
-#训练函数
-#start_time: 起始时间
-#end_time: 结束时间
-#duration: 时间间隔
-def train(start_time, end_time, region, is_week, duration=10):
+#计算两个序列的Pearson相关系数
+#x,y :输入的浮点数序列
+#输出: pearson相关系数
+def corrcoef(x,y):
+    n=len(x)
+    #求和
+    sum1=sum(x)
+    sum2=sum(y)
+    #求乘积之和
+    sumofxy=multipl(x,y)
+    #求平方和
+    sumofx2 = sum([pow(i,2) for i in x])
+    sumofy2 = sum([pow(j,2) for j in y])
+    num=sumofxy-(float(sum1)*float(sum2)/n)
+    #计算皮尔逊相关系数
+    den=math.sqrt((sumofx2-float(sum1**2)/n)*(sumofy2-float(sum2**2)/n))
+    return num/den
+
+# pca 函数
+# data : 输入矩阵数据
+# nRedDim:目标主成分个数
+# normalise:是否标准化
+# 输出: x:产生新的数据矩阵,y:重新计算的原数据,evals:特征值,evecs:特征向量
+def pca(data,nRedDim=0,normalise=0):
+    # 数据标准化
+    m = np.mean(data,axis=0)
+    data -= m
+    # 协方差矩阵
+    C = np.cov(np.transpose(data))
+    # 计算特征值特征向量，按降序排序
+    evals,evecs = np.linalg.eig(C)
+    indices = np.argsort(evals)
+    indices = indices[::-1]
+    evecs = evecs[:,indices]
+    evals = evals[indices]
+    if nRedDim>0:
+        evecs = evecs[:,:nRedDim]
+
+    if normalise:
+        for i in range(np.shape(evecs)[1]):
+            evecs[:,i] / np.linalg.norm(evecs[:,i]) * np.sqrt(evals[i])
+    # 产生新的数据矩阵
+    x = np.dot(np.transpose(evecs),np.transpose(data))
+    # 重新计算原数据
+    y=np.transpose(np.dot(evecs,x))+m
+    return x,y,evals,evecs
+#获取4中类型数据的矩阵,包括预处理,Normalize
+def get_data_array(start_time, end_time, region, is_week, duration=10):
     #以下每个数据都是一个dict,键为datetime
     app_incidence = preprocess_app_incidence(start_time, end_time, duration, region, is_week)
     print "finished get app_incidence data!"
@@ -291,13 +344,14 @@ def train(start_time, end_time, region, is_week, duration=10):
     print "finished get crowd_index data!"
     datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
     data_arr = [[] for i in range(4)]
-    
+
     for datetime_str in datetime_list:
         data_arr[0].append(app_incidence[datetime_str])
         data_arr[1].append(violation[datetime_str])
         data_arr[2].append(call_incidence[datetime_str])
         data_arr[3].append(crowd_index[datetime_str])
     np_data_array = np.array(data_arr)
+
     (rows,cols) = np_data_array.shape
     row_mins = np_data_array.min(axis=1)
     row_mins = np.repeat(row_mins,cols).reshape((rows,cols))
@@ -308,9 +362,100 @@ def train(start_time, end_time, region, is_week, duration=10):
     row_range = row_maxs - row_mins
     normed_data_array = (np_data_array - row_mins)/row_range
     print "normalized data successfully!"
+    return normed_data_array
+#训练函数
+#start_time: 起始时间
+#end_time: 结束时间
+#duration: 时间间隔
+def train(start_time, end_time, region, is_week, duration=10):
+    #获取4种类型数据的矩阵
+    normed_data_array = get_data_array(start_time, end_time, region, is_week, duration)
+    x,y,evals,evecs = pca(normed_data_array,nRedDim=4,normalise=0)
 
-    
-    return
+    return evecs
+def test_region(evecs, pca_count,start_time, end_time, region, is_week, duration=10):
+    #获取4种类型数据的矩阵
+    normed_data_array = get_data_array(start_time, end_time, region, is_week, duration)
+    evecs_arr = np.array(evecs[:,:pca_count])
+    transformed_arr = np.array(np.matrix(normed_data_array) * np.matrix(evecs_arr.real))
+    polices = preprocess_police(start_time, end_time, duration, region, is_week)
+    datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
+    data_arr = []
+
+    for datetime_str in datetime_list:
+        data_arr.append(polices[datetime_str])
+    data_arr = np.array(data_arr)
+    polices_max = data_arr.max()
+    normed_polices = data_arr / polices_max
+
+    print "finished get polices data!"
+    trace = go.Scatter(
+        x = transformed_arr[:,0],
+        y = normed_polices,
+        mode = 'markers',
+        name = 'pca1-警力',
+        marker=dict(
+            # size=3,
+            color = normed_polices,
+            colorscale =
+            # [
+            # [0.0, "#87CEFA"], [1.0,"rgb(255,0,0)"]
+            # ],
+            [
+            [0.0, "rgb(0,255,0)"], [0.111111111111, "rgb(215,48,39)"], [0.222222222222, "rgb(244,109,67)"], [0.333333333333, "rgb(253,174,97)"], [0.444444444444, "rgb(254,224,144)"], [0.555555555556, "rgb(224,243,248)"], [0.666666666667, "rgb(171,217,233)"], [0.777777777778, "rgb(116,173,209)"], [0.888888888889, "rgb(69,117,180)"], [1.0, "rgb(49,54,149)"]
+            ],
+            showscale=True
+        )
+    )
+    data = [trace]
+    layout = go.Layout(
+                    xaxis=dict(
+                        autotick=False,
+                        tick0=0,
+                        ticks='outside',
+                        dtick=0.2,
+                        ticklen=1.3,
+                        tickwidth=4,
+                        # ticks='',
+                        # showticklabels=False,
+                        tickcolor='#000',
+                        title='PCA1',
+                        titlefont=dict(
+                            family='Arial, sans-serif',
+                            size=24,
+                            color='black'
+                        ),
+                        tickfont=dict(
+                        family='Arial, sans-serif',
+                        size=20,
+                        color='black'
+                        ),
+                        zerolinecolor='#000000',
+                        zerolinewidth=3,
+                    ),
+                    yaxis=dict(
+                        autotick=False,
+                        ticks='outside',
+                        tick0=-1.0,
+                        dtick=0.1,
+                        ticklen=0.8,
+                        tickwidth=4,
+                        tickcolor='#000',
+                        title=u'警力水平',
+                        titlefont=dict(
+                            family='Arial, sans-serif',
+                            size=24,
+                            color='black'
+                        ),
+                        tickfont=dict(
+                        family='Arial, sans-serif',
+                        size=20,
+                        color='black'
+                        ),
+                        zerolinecolor='#000000',
+                        zerolinewidth=3,
+                    ))
+    plotly.offline.plot({"data" : data , "layout" : layout})
 
 if __name__ == "__main__":
-    train()
+    pass
