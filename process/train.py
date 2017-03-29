@@ -41,11 +41,11 @@ def generate_str_arr_from_date_to_date(from_date,to_date,duration_minute):
         dt_now = dt_now + time_delta
     return result_arr
 
-
-def generate_str_arr_from_time_to_time(from_time,to_time,duration_minute,second=1):
-
+#生成一天内的duration_minute为间隔的时间字符串序列
+def generate_str_arr_from_time_to_time(from_time,duration_minute,second=1):
+    time_delta=datetime.timedelta(days=1)
+    to_time = from_time +time_delta
     t_now = from_time
-
     result_arr = []
     time_delta=datetime.timedelta(minutes=duration_minute)
     while (t_now < to_time):
@@ -56,14 +56,13 @@ def generate_str_arr_from_time_to_time(from_time,to_time,duration_minute,second=
         result_arr.append(dt_str)
         t_now = t_now + time_delta
     return result_arr
+
 #根据起始结束时间,以及duration,isweek获取datetime_list
 def get_date_time_list(start_time,end_time,duration,is_week):
     if not is_week:
         datetime_list = generate_str_arr_from_date_to_date(start_time, end_time, duration)
     else:
-        time_delta=datetime.timedelta(days=1)
-        to_time = start_time +time_delta
-        time_list = generate_str_arr_from_time_to_time(start_time,to_time,duration)
+        time_list = generate_str_arr_from_time_to_time(start_time,duration,second=1)
         datetime_list = []
         #key 1 weekday
         for weekday in range(7):
@@ -72,6 +71,19 @@ def get_date_time_list(start_time,end_time,duration,is_week):
                 dt_str = str(weekday) + " " + time_i
                 datetime_list.append(dt_str)
     return datetime_list
+
+#根据datetime_list和是否是综合区构建region_dict
+def get_region_dict(region,datetime_list):
+    if region!=0:
+        result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
+    else:
+        result_dict = {}
+        #每个区域一个dict
+        for item in pinyin_hash.values():
+            result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
+        result_dict[0] = {time:0 for time in datetime_list}
+    return result_dict
+
 # 处理app举报数据
 #
 #region:0——综合区,1~7:区县编号
@@ -81,14 +93,8 @@ def preprocess_app_incidence(start_time, end_time, duration, region, is_week):
     if region != 0:
         app_incidence = app_incidence.filter(region=region)
     datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
-    if region!=0:
-        result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
-    else:
-        result_dict = {}
-        #每个区域一个dict
-        for item in pinyin_hash.values():
-            result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
-        result_dict[0] = {time:0 for time in datetime_list}
+    result_dict = get_region_dict(region,datetime_list)
+
     #循环遍历
     for item in app_incidence:
         idt = item.create_time
@@ -97,7 +103,6 @@ def preprocess_app_incidence(start_time, end_time, duration, region, is_week):
             result_dict[ct_time_str] += 1
         else:
             result_dict[item.region][ct_time_str] += 1
-
 
     #综合区,对所有区县的数据对应时间点取平均
     if region == 0:
@@ -117,15 +122,8 @@ def preprocess_vialation(start_time, end_time, duration, region, is_week):
         vialation = vialation.filter(region=region)
 
     datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
+    result_dict = get_region_dict(region,datetime_list)
 
-    if region!=0:
-        result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
-    else:
-        result_dict = {}
-        #每个区域一个dict
-        for item in pinyin_hash.values():
-            result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
-        result_dict[0] = {time:0 for time in datetime_list}
     #循环遍历
     for item in vialation:
         idt = item.create_time
@@ -152,14 +150,8 @@ def preprocess_call_incidence(start_time, end_time, duration, region, is_week):
         call_incidences = call_incidences.filter(region=region)
 
     datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
-    if region!=0:
-        result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
-    else:
-        result_dict = {}
-        #每个区域一个dict
-        for item in pinyin_hash.values():
-            result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
-        result_dict[0] = {time:0 for time in datetime_list}
+    result_dict = get_region_dict(region,datetime_list)
+
     #循环遍历
     for item in call_incidences:
         idt = item.create_time
@@ -187,14 +179,8 @@ def preprocess_crowd_index(start_time, end_time, duration, region, is_week):
         crowd_index = crowd_index.filter(region=region)
 
     datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
-    if region!=0:
-        result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
-    else:
-        result_dict = {}
-        #每个区域一个dict
-        for item in pinyin_hash.values():
-            result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
-        result_dict[0] = {time:0 for time in datetime_list}
+    result_dict = get_region_dict(region,datetime_list)
+
     #循环遍历
     for item in crowd_index:
         idt = item.create_time
@@ -221,14 +207,8 @@ def preprocess_police(start_time, end_time, duration, region, is_week):
         polices = polices.filter(region=region).order_by("create_time")
 
     datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
-    if region!=0:
-        result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
-    else:
-        result_dict = {}
-        #每个区域一个dict
-        for item in pinyin_hash.values():
-            result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
-        result_dict[0] = {time:0 for time in datetime_list}
+    result_dict = get_region_dict(region,datetime_list)
+
     last_dt = None
     last_val = None
     partitions = (60 / duration)
