@@ -93,6 +93,32 @@ def get_region_avg_result(region,datetime_list,**result_dict):
                 sum_val += result_dict[str(item)][dt]
             result_dict['0'][dt] = sum_val/len_pinyin_hash
     return result_dict
+#获得星期聚合结果
+def get_week_agg_result(start_time,end_time,duration,region,datetime_list,**result_dict):
+    week_datetime_list = get_date_time_list(start_time,end_time,duration,1)
+    #记录星期聚合结果的数据dict
+    week_result_dict = {time:0 for time in week_datetime_list}
+
+    #记录星期聚合过程中每个时间点被加了几次,最后算平均时除的每个时间点size大小
+    size_result_dict = {time:0 for time in week_datetime_list}
+    if region != 0:
+        result_dict_to_handle = result_dict
+    else:
+        #综合区只取综合结果
+        result_dict_to_handle = result_dict['0']
+    for dt_str in datetime_list:
+        #格式化datetime_list 中的字符串为datetime类型
+        dt_now = datetime.datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+        time_now = dt_str.split(" ")[1]
+        weekday = dt_now.weekday()
+        query_str = str(weekday) + " " + time_now
+        week_result_dict[query_str] += result_dict_to_handle[dt_str]
+        size_result_dict[query_str] +=1
+    week_real_result = {}
+    #迭代一个星期的所有时间
+    for week_datetime in week_datetime_list:
+        week_real_result[week_datetime] = week_result_dict[week_datetime]/float(size_result_dict[week_datetime])
+    return week_real_result
 # 处理app举报数据
 #
 #region:0——综合区,1~7:区县编号
@@ -114,6 +140,9 @@ def preprocess_app_incidence(start_time, end_time, duration, region, is_week):
             result_dict[str(item.region)][ct_time_str] += 1
 
     result_dict = get_region_avg_result(region,datetime_list,**result_dict)
+    if is_week:
+        week_real_result = get_week_agg_result(start_time,end_time,duration,region,datetime_list,**result_dict)
+        return week_real_result
     return result_dict
 
 
@@ -136,6 +165,9 @@ def preprocess_vialation(start_time, end_time, duration, region, is_week):
             result_dict[str(item.region)][ct_time_str] += 1
 
     result_dict = get_region_avg_result(region,datetime_list,**result_dict)
+    if is_week:
+        week_real_result = get_week_agg_result(start_time,end_time,duration,region,datetime_list,**result_dict)
+        return week_real_result
     return result_dict
 
 #处理122报警数据
@@ -157,6 +189,9 @@ def preprocess_call_incidence(start_time, end_time, duration, region, is_week):
             result_dict[str(item.region)][ct_time_str] += 1
 
     result_dict = get_region_avg_result(region,datetime_list,**result_dict)
+    if is_week:
+        week_real_result = get_week_agg_result(start_time,end_time,duration,region,datetime_list,**result_dict)
+        return week_real_result
     return result_dict
 
 
@@ -178,6 +213,9 @@ def preprocess_crowd_index(start_time, end_time, duration, region, is_week):
         else:
             result_dict[str(item.region)][ct_time_str] = item.crowd_index
     result_dict = get_region_avg_result(region,datetime_list,**result_dict)
+    if is_week:
+        week_real_result = get_week_agg_result(start_time,end_time,duration,region,datetime_list,**result_dict)
+        return week_real_result
     return result_dict
 
 
@@ -216,6 +254,9 @@ def preprocess_police(start_time, end_time, duration, region, is_week):
             last_val = now_val
 
     result_dict = get_region_avg_result(region,datetime_list,**result_dict)
+    if is_week:
+        week_real_result = get_week_agg_result(start_time,end_time,duration,region,datetime_list,**result_dict)
+        return week_real_result
     return result_dict
 
 #训练函数
