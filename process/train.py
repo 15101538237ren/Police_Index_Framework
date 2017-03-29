@@ -1,7 +1,7 @@
 #coding: utf-8
 
 from models import *
-
+from helpers import pinyin_hash
 import datetime
 
 # 输入分钟,按几分钟切割,按duration取整
@@ -68,13 +68,21 @@ def preprocess_app_incidence(start_time, end_time, duration, region, is_week):
     #print type(app_incidence)
 
     datetime_list = generate_str_arr_from_date_to_date(start_time, end_time, duration)
-    result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
-
+    if region!=0:
+        result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
+    else:
+        result_dict = {}
+        #每个区域一个dict
+        for item in pinyin_hash.values():
+            result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
     #循环遍历
     for item in app_incidence:
         idt = item.create_time
         ct_time_str = format_time(idt, "%Y-%m-%d %H:%M:%S")
-        result_dict[ct_time_str] += 1
+        if region != 0:
+            result_dict[ct_time_str] += 1
+        else:
+            result_dict[item.region][ct_time_str] += 1
 
     #key 1 weekday
     #for weekday in range(7):
@@ -91,13 +99,23 @@ def preprocess_vialation(start_time, end_time, duration, region, is_week):
         vialation = vialation.filter(region=region)
 
     datetime_list = generate_str_arr_from_date_to_date(start_time, end_time, duration)
-    result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
+
+    if region!=0:
+        result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
+    else:
+        result_dict = {}
+        #每个区域一个dict
+        for item in pinyin_hash.values():
+            result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
 
     #循环遍历
     for item in vialation:
         idt = item.create_time
         ct_time_str = format_time(idt, "%Y-%m-%d %H:%M:%S")
-        result_dict[ct_time_str] += 1
+        if region != 0:
+            result_dict[ct_time_str] += 1
+        else:
+            result_dict[item.region][ct_time_str] += 1
 
     return result_dict
 
@@ -108,13 +126,22 @@ def preprocess_call_incidence(start_time, end_time, duration, region, is_week):
         call_incidences = call_incidences.filter(region=region)
 
     datetime_list = generate_str_arr_from_date_to_date(start_time, end_time, duration)
-    result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
+    if region!=0:
+        result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
+    else:
+        result_dict = {}
+        #每个区域一个dict
+        for item in pinyin_hash.values():
+            result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
 
     #循环遍历
     for item in call_incidences:
         idt = item.create_time
         ct_time_str = format_time(idt, "%Y-%m-%d %H:%M:%S")
-        result_dict[ct_time_str] += 1
+        if region != 0:
+            result_dict[ct_time_str] += 1
+        else:
+            result_dict[item.region][ct_time_str] += 1
 
     return result_dict
 
@@ -126,14 +153,22 @@ def preprocess_crowd_index(start_time, end_time, duration, region, is_week):
         crowd_index = crowd_index.filter(region=region)
 
     datetime_list = generate_str_arr_from_date_to_date(start_time, end_time, duration)
-    result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
+    if region!=0:
+        result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
+    else:
+        result_dict = {}
+        #每个区域一个dict
+        for item in pinyin_hash.values():
+            result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
 
     #循环遍历
     for item in crowd_index:
         idt = item.create_time
         ct_time_str = format_time(idt, "%Y-%m-%d %H:%M:%S")
-        result_dict[ct_time_str] = item.crowd_index
-
+        if region != 0:
+            result_dict[ct_time_str] = item.crowd_index
+        else:
+            result_dict[item.region][ct_time_str] = item.crowd_index
     return result_dict
 
 
@@ -144,7 +179,13 @@ def preprocess_police(start_time, end_time, duration, region, is_week):
         polices = polices.filter(region=region).order_by("create_time")
 
     datetime_list = generate_str_arr_from_date_to_date(start_time, end_time, duration)
-    result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
+    if region!=0:
+        result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
+    else:
+        result_dict = {}
+        #每个区域一个dict
+        for item in pinyin_hash.values():
+            result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
     last_dt = None
     last_val = None
     partitions = (60 / duration)
@@ -163,7 +204,10 @@ def preprocess_police(start_time, end_time, duration, region, is_week):
                 dt = last_dt + time_delta
                 val = last_val + j * part_val
                 ct_time_str = format_time(dt, "%Y-%m-%d %H:%M:%S")
-                result_dict[ct_time_str] = val
+                if region != 0:
+                    result_dict[ct_time_str] =  val
+                else:
+                    result_dict[item.region][ct_time_str] =  val
             last_dt = now_dt
             last_val = now_val
     return result_dict
@@ -173,8 +217,8 @@ def preprocess_police(start_time, end_time, duration, region, is_week):
 #end_time: 结束时间
 #duration: 时间间隔
 def train(start_time, end_time, region, is_week, duration=10):
-    # app_incidence_result = preprocess_app_incidence(start_time, end_time, duration, region, is_week)
-    crowd_index = preprocess_crowd_index(start_time,end_time,duration,region,is_week)
+    app_incidence_result = preprocess_app_incidence(start_time, end_time, duration, region, is_week)
+    # crowd_index = preprocess_crowd_index(start_time,end_time,duration,region,is_week)
     print "123"
     return
 
