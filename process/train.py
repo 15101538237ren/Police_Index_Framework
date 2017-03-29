@@ -101,6 +101,23 @@ def preprocess_vialation(start_time, end_time, duration, region, is_week):
 
     return result_dict
 
+#处理122报警数据
+def preprocess_call_incidence(start_time, end_time, duration, region, is_week):
+    call_incidences = Call_Incidence.objects.filter(create_time__range = [start_time, end_time])
+    if region != 0:
+        call_incidences = call_incidences.filter(region=region)
+
+    datetime_list = generate_str_arr_from_date_to_date(start_time, end_time, duration)
+    result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
+
+    #循环遍历
+    for item in call_incidences:
+        idt = item.create_time
+        ct_time_str = format_time(idt, "%Y-%m-%d %H:%M:%S")
+        result_dict[ct_time_str] += 1
+
+    return result_dict
+
 
 #处理拥堵指数数据
 def preprocess_crowd_index(start_time, end_time, duration, region, is_week):
@@ -121,16 +138,43 @@ def preprocess_crowd_index(start_time, end_time, duration, region, is_week):
 
 
 #处理警力数据
-def preprocess_police():
+def preprocess_police(start_time, end_time, duration, region, is_week):
+    polices = Police.objects.filter(create_time__range = [start_time, end_time])
+    if region != 0:
+        polices = polices.filter(region=region).order_by("create_time")
 
-    return
+    datetime_list = generate_str_arr_from_date_to_date(start_time, end_time, duration)
+    result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
+    last_dt = None
+    last_val = None
+    partitions = (60 / duration)
+
+    #循环遍历
+    for idx,item in enumerate(polices):
+        if idx == 0:
+            last_dt = item.create_time
+            last_val = item.people_cnt
+        else:
+            now_dt = item.create_time
+            now_val = item.people_cnt
+            part_val = (now_val-last_val)/partitions
+            for j in range(1 , partitions):
+                time_delta=datetime.timedelta(minutes=j*duration)
+                dt = last_dt + time_delta
+                val = last_val + j * part_val
+                ct_time_str = format_time(dt, "%Y-%m-%d %H:%M:%S")
+                result_dict[ct_time_str] = val
+            last_dt = now_dt
+            last_val = now_val
+    return result_dict
 
 #训练函数
 #start_time: 起始时间
 #end_time: 结束时间
 #duration: 时间间隔
 def train(start_time, end_time, region, is_week, duration=10):
-    app_incidence_result = preprocess_app_incidence(start_time, end_time, duration, region, is_week)
+    # app_incidence_result = preprocess_app_incidence(start_time, end_time, duration, region, is_week)
+    crowd_index = preprocess_crowd_index(start_time,end_time,duration,region,is_week)
     print "123"
     return
 
