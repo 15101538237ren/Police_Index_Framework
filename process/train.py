@@ -3,6 +3,7 @@
 from models import *
 from helpers import pinyin_hash
 import datetime
+import numpy as np
 
 # 输入分钟,按几分钟切割,按duration取整
 def partition_time(minute, duration=10):
@@ -90,7 +91,7 @@ def get_region_avg_result(region,datetime_list,**result_dict):
             len_pinyin_hash = len(pinyin_hash.values())
             sum_val = 0.0
             for item in pinyin_hash.values():
-                sum_val += result_dict[str(item)][dt]
+                sum_val =  sum_val + float(result_dict[str(item)][dt])
             result_dict['0'][dt] = sum_val/len_pinyin_hash
     return result_dict
 #获得星期聚合结果
@@ -143,20 +144,23 @@ def preprocess_app_incidence(start_time, end_time, duration, region, is_week):
     if is_week:
         week_real_result = get_week_agg_result(start_time,end_time,duration,region,datetime_list,**result_dict)
         return week_real_result
-    return result_dict
+    if region != 0:
+        return result_dict
+    else:
+        return result_dict['0']
 
 
 #处理违章数据
-def preprocess_vialation(start_time, end_time, duration, region, is_week):
-    vialation = Violation.objects.filter(create_time__range = [start_time, end_time])
+def preprocess_violation(start_time, end_time, duration, region, is_week):
+    violation = Violation.objects.filter(create_time__range = [start_time, end_time])
     if region != 0:
-        vialation = vialation.filter(region=region)
+        violation = violation.filter(region=region)
 
-    datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
+    datetime_list = get_date_time_list(start_time,end_time,duration,0)
     result_dict = get_region_dict(region,datetime_list)
 
     #循环遍历
-    for item in vialation:
+    for item in violation:
         idt = item.create_time
         ct_time_str = format_time(idt, "%Y-%m-%d %H:%M:%S")
         if region != 0:
@@ -168,7 +172,10 @@ def preprocess_vialation(start_time, end_time, duration, region, is_week):
     if is_week:
         week_real_result = get_week_agg_result(start_time,end_time,duration,region,datetime_list,**result_dict)
         return week_real_result
-    return result_dict
+    if region != 0:
+        return result_dict
+    else:
+        return result_dict['0']
 
 #处理122报警数据
 def preprocess_call_incidence(start_time, end_time, duration, region, is_week):
@@ -176,7 +183,7 @@ def preprocess_call_incidence(start_time, end_time, duration, region, is_week):
     if region != 0:
         call_incidences = call_incidences.filter(region=region)
 
-    datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
+    datetime_list = get_date_time_list(start_time,end_time,duration,0)
     result_dict = get_region_dict(region,datetime_list)
 
     #循环遍历
@@ -192,7 +199,10 @@ def preprocess_call_incidence(start_time, end_time, duration, region, is_week):
     if is_week:
         week_real_result = get_week_agg_result(start_time,end_time,duration,region,datetime_list,**result_dict)
         return week_real_result
-    return result_dict
+    if region != 0:
+        return result_dict
+    else:
+        return result_dict['0']
 
 
 #处理拥堵指数数据
@@ -201,7 +211,7 @@ def preprocess_crowd_index(start_time, end_time, duration, region, is_week):
     if region != 0:
         crowd_index = crowd_index.filter(region=region)
 
-    datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
+    datetime_list = get_date_time_list(start_time,end_time,duration,0)
     result_dict = get_region_dict(region,datetime_list)
 
     #循环遍历
@@ -216,7 +226,10 @@ def preprocess_crowd_index(start_time, end_time, duration, region, is_week):
     if is_week:
         week_real_result = get_week_agg_result(start_time,end_time,duration,region,datetime_list,**result_dict)
         return week_real_result
-    return result_dict
+    if region != 0:
+        return result_dict
+    else:
+        return result_dict['0']
 
 
 #处理警力数据
@@ -225,7 +238,7 @@ def preprocess_police(start_time, end_time, duration, region, is_week):
     if region != 0:
         polices = polices.filter(region=region).order_by("create_time")
 
-    datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
+    datetime_list = get_date_time_list(start_time,end_time,duration,0)
     result_dict = get_region_dict(region,datetime_list)
 
     last_dt = None
@@ -257,16 +270,46 @@ def preprocess_police(start_time, end_time, duration, region, is_week):
     if is_week:
         week_real_result = get_week_agg_result(start_time,end_time,duration,region,datetime_list,**result_dict)
         return week_real_result
-    return result_dict
+    if region != 0:
+        return result_dict
+    else:
+        return result_dict['0']
 
 #训练函数
 #start_time: 起始时间
 #end_time: 结束时间
 #duration: 时间间隔
 def train(start_time, end_time, region, is_week, duration=10):
-    app_incidence_result = preprocess_app_incidence(start_time, end_time, duration, region, is_week)
-    # crowd_index = preprocess_crowd_index(start_time,end_time,duration,region,is_week)
-    print "123"
+    #以下每个数据都是一个dict,键为datetime
+    app_incidence = preprocess_app_incidence(start_time, end_time, duration, region, is_week)
+    print "finished get app_incidence data!"
+    violation = preprocess_violation(start_time, end_time, duration, region, is_week)
+    print "finished get violation data!"
+    call_incidence = preprocess_call_incidence(start_time, end_time, duration, region, is_week)
+    print "finished get call_incidence data!"
+    crowd_index = preprocess_crowd_index(start_time,end_time,duration,region,is_week)
+    print "finished get crowd_index data!"
+    datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
+    data_arr = [[] for i in range(4)]
+    
+    for datetime_str in datetime_list:
+        data_arr[0].append(app_incidence[datetime_str])
+        data_arr[1].append(violation[datetime_str])
+        data_arr[2].append(call_incidence[datetime_str])
+        data_arr[3].append(crowd_index[datetime_str])
+    np_data_array = np.array(data_arr)
+    (rows,cols) = np_data_array.shape
+    row_mins = np_data_array.min(axis=1)
+    row_mins = np.repeat(row_mins,cols).reshape((rows,cols))
+
+    row_maxs = np_data_array.max(axis=1)
+    row_maxs = np.repeat(row_maxs,cols).reshape((rows,cols))
+
+    row_range = row_maxs - row_mins
+    normed_data_array = (np_data_array - row_mins)/row_range
+    print "normalized data successfully!"
+
+    
     return
 
 if __name__ == "__main__":
