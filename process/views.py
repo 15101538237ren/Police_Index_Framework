@@ -12,5 +12,5 @@ def index(request):
     from_time = datetime.datetime(2017,2,1,0,0,0,0)
     to_time = datetime.datetime(2017,2,28,23,59,59,0)
     # time_list = generate_str_arr_from_date_to_date(from_time,to_time,10)
-    train(from_time, to_time, 0, 0)
+    train(from_time, to_time, 0, 1, 10)
     return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))

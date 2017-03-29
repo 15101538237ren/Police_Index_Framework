@@ -56,7 +56,22 @@ def generate_str_arr_from_time_to_time(from_time,to_time,duration_minute,second=
         result_arr.append(dt_str)
         t_now = t_now + time_delta
     return result_arr
-
+#根据起始结束时间,以及duration,isweek获取datetime_list
+def get_date_time_list(start_time,end_time,duration,is_week):
+    if not is_week:
+        datetime_list = generate_str_arr_from_date_to_date(start_time, end_time, duration)
+    else:
+        time_delta=datetime.timedelta(days=1)
+        to_time = start_time +time_delta
+        time_list = generate_str_arr_from_time_to_time(start_time,to_time,duration)
+        datetime_list = []
+        #key 1 weekday
+        for weekday in range(7):
+            #key2 time
+           for time_i in time_list:
+                dt_str = str(weekday) + " " + time_i
+                datetime_list.append(dt_str)
+    return datetime_list
 # 处理app举报数据
 #
 #region:0——综合区,1~7:区县编号
@@ -65,9 +80,7 @@ def preprocess_app_incidence(start_time, end_time, duration, region, is_week):
     app_incidence = App_Incidence.objects.filter(create_time__range=[start_time, end_time])
     if region != 0:
         app_incidence = app_incidence.filter(region=region)
-    #print type(app_incidence)
-
-    datetime_list = generate_str_arr_from_date_to_date(start_time, end_time, duration)
+    datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
     if region!=0:
         result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
     else:
@@ -75,6 +88,7 @@ def preprocess_app_incidence(start_time, end_time, duration, region, is_week):
         #每个区域一个dict
         for item in pinyin_hash.values():
             result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
+        result_dict[0] = {time:0 for time in datetime_list}
     #循环遍历
     for item in app_incidence:
         idt = item.create_time
@@ -84,12 +98,16 @@ def preprocess_app_incidence(start_time, end_time, duration, region, is_week):
         else:
             result_dict[item.region][ct_time_str] += 1
 
-    #key 1 weekday
-    #for weekday in range(7):
-        #key2 time
-       #for time_i in time_list:
 
-    return result_dict
+    #综合区,对所有区县的数据对应时间点取平均
+    if region == 0:
+        for dt in datetime_list:
+            len_pinyin_hash = len(pinyin_hash.values())
+            sum_val = 0.0
+            for item in pinyin_hash.values():
+                sum_val += result_dict[item][dt]
+            result_dict[0][dt] = sum_val/len_pinyin_hash
+    return result_dict[0]
 
 
 #处理违章数据
@@ -98,7 +116,7 @@ def preprocess_vialation(start_time, end_time, duration, region, is_week):
     if region != 0:
         vialation = vialation.filter(region=region)
 
-    datetime_list = generate_str_arr_from_date_to_date(start_time, end_time, duration)
+    datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
 
     if region!=0:
         result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
@@ -107,7 +125,7 @@ def preprocess_vialation(start_time, end_time, duration, region, is_week):
         #每个区域一个dict
         for item in pinyin_hash.values():
             result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
-
+        result_dict[0] = {time:0 for time in datetime_list}
     #循环遍历
     for item in vialation:
         idt = item.create_time
@@ -117,7 +135,15 @@ def preprocess_vialation(start_time, end_time, duration, region, is_week):
         else:
             result_dict[item.region][ct_time_str] += 1
 
-    return result_dict
+    #综合区,对所有区县的数据对应时间点取平均
+    if region == 0:
+        for dt in datetime_list:
+            len_pinyin_hash = len(pinyin_hash.values())
+            sum_val = 0.0
+            for item in pinyin_hash.values():
+                sum_val += result_dict[item][dt]
+            result_dict[0][dt] = sum_val/len_pinyin_hash
+    return result_dict[0]
 
 #处理122报警数据
 def preprocess_call_incidence(start_time, end_time, duration, region, is_week):
@@ -125,7 +151,7 @@ def preprocess_call_incidence(start_time, end_time, duration, region, is_week):
     if region != 0:
         call_incidences = call_incidences.filter(region=region)
 
-    datetime_list = generate_str_arr_from_date_to_date(start_time, end_time, duration)
+    datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
     if region!=0:
         result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
     else:
@@ -133,7 +159,7 @@ def preprocess_call_incidence(start_time, end_time, duration, region, is_week):
         #每个区域一个dict
         for item in pinyin_hash.values():
             result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
-
+        result_dict[0] = {time:0 for time in datetime_list}
     #循环遍历
     for item in call_incidences:
         idt = item.create_time
@@ -143,7 +169,15 @@ def preprocess_call_incidence(start_time, end_time, duration, region, is_week):
         else:
             result_dict[item.region][ct_time_str] += 1
 
-    return result_dict
+    #综合区,对所有区县的数据对应时间点取平均
+    if region == 0:
+        for dt in datetime_list:
+            len_pinyin_hash = len(pinyin_hash.values())
+            sum_val = 0.0
+            for item in pinyin_hash.values():
+                sum_val += result_dict[item][dt]
+            result_dict[0][dt] = sum_val/len_pinyin_hash
+    return result_dict[0]
 
 
 #处理拥堵指数数据
@@ -152,7 +186,7 @@ def preprocess_crowd_index(start_time, end_time, duration, region, is_week):
     if region != 0:
         crowd_index = crowd_index.filter(region=region)
 
-    datetime_list = generate_str_arr_from_date_to_date(start_time, end_time, duration)
+    datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
     if region!=0:
         result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
     else:
@@ -160,7 +194,7 @@ def preprocess_crowd_index(start_time, end_time, duration, region, is_week):
         #每个区域一个dict
         for item in pinyin_hash.values():
             result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
-
+        result_dict[0] = {time:0 for time in datetime_list}
     #循环遍历
     for item in crowd_index:
         idt = item.create_time
@@ -169,7 +203,15 @@ def preprocess_crowd_index(start_time, end_time, duration, region, is_week):
             result_dict[ct_time_str] = item.crowd_index
         else:
             result_dict[item.region][ct_time_str] = item.crowd_index
-    return result_dict
+    #综合区,对所有区县的数据对应时间点取平均
+    if region == 0:
+        for dt in datetime_list:
+            len_pinyin_hash = len(pinyin_hash.values())
+            sum_val = 0.0
+            for item in pinyin_hash.values():
+                sum_val += result_dict[item][dt]
+            result_dict[0][dt] = sum_val/len_pinyin_hash
+    return result_dict[0]
 
 
 #处理警力数据
@@ -178,7 +220,7 @@ def preprocess_police(start_time, end_time, duration, region, is_week):
     if region != 0:
         polices = polices.filter(region=region).order_by("create_time")
 
-    datetime_list = generate_str_arr_from_date_to_date(start_time, end_time, duration)
+    datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
     if region!=0:
         result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
     else:
@@ -186,6 +228,7 @@ def preprocess_police(start_time, end_time, duration, region, is_week):
         #每个区域一个dict
         for item in pinyin_hash.values():
             result_dict[item] = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
+        result_dict[0] = {time:0 for time in datetime_list}
     last_dt = None
     last_val = None
     partitions = (60 / duration)
@@ -210,7 +253,16 @@ def preprocess_police(start_time, end_time, duration, region, is_week):
                     result_dict[item.region][ct_time_str] =  val
             last_dt = now_dt
             last_val = now_val
-    return result_dict
+
+    #综合区,对所有区县的数据对应时间点取平均
+    if region == 0:
+        for dt in datetime_list:
+            len_pinyin_hash = len(pinyin_hash.values())
+            sum_val = 0.0
+            for item in pinyin_hash.values():
+                sum_val += result_dict[item][dt]
+            result_dict[0][dt] = sum_val/len_pinyin_hash
+    return result_dict[0]
 
 #训练函数
 #start_time: 起始时间
