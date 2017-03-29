@@ -119,7 +119,7 @@ def get_week_agg_result(start_time,end_time,duration,region,datetime_list,**resu
     week_real_result = {}
     #迭代一个星期的所有时间
     for week_datetime in week_datetime_list:
-        week_real_result[week_datetime] = week_result_dict[week_datetime]/float(size_result_dict[week_datetime])
+        week_real_result[week_datetime] = float(week_result_dict[week_datetime])/float(size_result_dict[week_datetime])
     return week_real_result
 # 处理app举报数据
 #
@@ -346,10 +346,10 @@ def get_data_array(start_time, end_time, region, is_week, duration=10):
     data_arr = [[] for i in range(4)]
 
     for datetime_str in datetime_list:
-        data_arr[0].append(app_incidence[datetime_str])
-        data_arr[1].append(violation[datetime_str])
-        data_arr[2].append(call_incidence[datetime_str])
-        data_arr[3].append(crowd_index[datetime_str])
+        data_arr[0].append(float(app_incidence[datetime_str]))
+        data_arr[1].append(float(violation[datetime_str]))
+        data_arr[2].append(float(call_incidence[datetime_str]))
+        data_arr[3].append(float(crowd_index[datetime_str]))
     np_data_array = np.array(data_arr)
 
     (rows,cols) = np_data_array.shape
@@ -370,28 +370,56 @@ def get_data_array(start_time, end_time, region, is_week, duration=10):
 def train(start_time, end_time, region, is_week, duration=10):
     #获取4种类型数据的矩阵
     normed_data_array = get_data_array(start_time, end_time, region, is_week, duration)
-    x,y,evals,evecs = pca(normed_data_array,nRedDim=4,normalise=0)
+    x,y,evals,evecs = pca(np.transpose(normed_data_array),nRedDim=4,normalise=0)
 
     return evecs
 def test_region(evecs, pca_count,start_time, end_time, region, is_week, duration=10):
     #获取4种类型数据的矩阵
-    normed_data_array = get_data_array(start_time, end_time, region, is_week, duration)
-    evecs_arr = np.array(evecs[:,:pca_count])
-    transformed_arr = np.array(np.matrix(normed_data_array) * np.matrix(evecs_arr.real))
-    polices = preprocess_police(start_time, end_time, duration, region, is_week)
+
+    #以下每个数据都是一个dict,键为datetime
+    app_incidence = preprocess_app_incidence(start_time, end_time, duration, region, is_week)
+    print "finished get app_incidence data!"
+    violation = preprocess_violation(start_time, end_time, duration, region, is_week)
+    print "finished get violation data!"
+    call_incidence = preprocess_call_incidence(start_time, end_time, duration, region, is_week)
+    print "finished get call_incidence data!"
+    crowd_index = preprocess_crowd_index(start_time,end_time,duration,region,is_week)
+    print "finished get crowd_index data!"
     datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
-    data_arr = []
-
-    for datetime_str in datetime_list:
-        data_arr.append(polices[datetime_str])
-    data_arr = np.array(data_arr)
-    polices_max = data_arr.max()
-    normed_polices = data_arr / polices_max
-
+    data_arr = [[] for i in range(4)]
+    police_data_arr = []
+    polices = preprocess_police(start_time, end_time, duration, region, is_week)
     print "finished get polices data!"
+    for datetime_str in datetime_list:
+        if polices[datetime_str] != 0:
+            police_data_arr.append(polices[datetime_str])
+            data_arr[0].append(float(app_incidence[datetime_str]))
+            data_arr[1].append(float(violation[datetime_str]))
+            data_arr[2].append(float(call_incidence[datetime_str]))
+            data_arr[3].append(float(crowd_index[datetime_str]))
+    police_data_arr = np.array(police_data_arr)
+    np_data_array = np.array(data_arr)
+
+    polices_max = float(police_data_arr.max())
+    normed_polices = police_data_arr / polices_max
+
+    (rows,cols) = np_data_array.shape
+    row_mins = np_data_array.min(axis=1)
+    row_mins = np.repeat(row_mins,cols).reshape((rows,cols))
+
+    row_maxs = np_data_array.max(axis=1)
+    row_maxs = np.repeat(row_maxs,cols).reshape((rows,cols))
+
+    row_range = row_maxs - row_mins
+    normed_data_array = (np_data_array - row_mins)/row_range
+    print "normalized data successfully!"
+
+    evecs_arr = np.array(evecs[:,:pca_count])
+    transformed_arr = np.array(np.matrix(np.transpose(normed_data_array)) * np.matrix(evecs_arr.real))
+
     trace = go.Scatter(
         x = transformed_arr[:,0],
-        y = normed_polices,
+        y = list(normed_polices),
         mode = 'markers',
         name = 'pca1-警力',
         marker=dict(

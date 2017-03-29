@@ -12,8 +12,13 @@ def index(request):
     #import_call_incidence_data(input_file_path,path_pkl_path)
     from_time = datetime.datetime(2017,2,1,0,0,0,0)
     to_time = datetime.datetime(2017,2,28,23,59,59,0)
-    # time_list = generate_str_arr_from_date_to_date(from_time,to_time,10)
-    evecs = train(from_time, to_time, region=0, is_week=0, duration=10)
+    is_week = 1
+    duration = 10
     pca_count = 2
-    test_region(evecs,pca_count,from_time, to_time, region=pinyin_hash["chaoyang"], is_week=0, duration=10)
+    train_region = 0
+    test_region = pinyin_hash["chaoyang"]
+    # time_list = generate_str_arr_from_date_to_date(from_time,to_time,10)
+    evecs = train(from_time, to_time, region=train_region, is_week=is_week, duration=duration)
+    print evecs[:,0]
+    test_region(evecs,pca_count,from_time, to_time, region = test_region, is_week=is_week, duration=duration)
     return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
