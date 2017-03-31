@@ -1,0 +1,7 @@
+shuju/
+*.pyc
+*.zip
+*.rar
+*.tar.gz
+.idea/
+geocoding_v1/
