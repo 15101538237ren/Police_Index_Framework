@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-
-
 import xlrd,os,datetime,pytz,pickle,csv
-from models import *
-from helpers import pinyin_hash,check_point,region_hash2
-import convert
-from baidumap import BaiduMap
+from process.models import *
+from process.helpers import pinyin_hash,check_point,region_hash2
+from process.baidumap import BaiduMap
 
 district_row_no = {"dongcheng":3, "xicheng":4, "chaoyang":5, "haidian":6,"fengtai":7,"shijingshan":8,"daxing":19}
 sheet_idx = {2:"dongcheng",3:"xicheng",4:"haidian",5:"chaoyang",6:"daxing",7:"shijingshan",8:"fengtai"}

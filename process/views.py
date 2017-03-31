@@ -1,15 +1,15 @@
 # coding: utf-8
 from django.shortcuts import render_to_response
 from django.template import RequestContext
-from import_data import import_call_incidence_data
-from train import *
-from helpers import pinyin_hash,week_hash
+from process.train import *
+from process.helpers import pinyin_hash,week_hash
 import datetime
 # evecs_tmp = np.array()
 def index(request):
     if request.method == 'GET':
         regions = region_hash
         week_agg = week_hash
+        ab=1
         return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
     else:
         region = int(request.POST.get("train_region",0))
@@ -33,6 +33,7 @@ def index(request):
         regions = region_hash
         week_agg = week_hash
         return render_to_response('process/pca_rst.html', locals(), context_instance=RequestContext(request))
+
 def test_region_now(request):
 
     if request.method == 'POST':
