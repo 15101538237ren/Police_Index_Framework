@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-
 import xlrd,os,datetime,pytz,pickle,csv
-from models import *
-from helpers import pinyin_hash,check_point,region_hash2
-import convert
-from baidumap import BaiduMap
+from process.models import *
+from process.helpers import pinyin_hash,check_point,region_hash2
+from process.baidumap import BaiduMap
 
 district_row_no = {"dongcheng":3, "xicheng":4, "chaoyang":5, "haidian":6,"fengtai":7,"shijingshan":8,"daxing":19}
 sheet_idx = {2:"dongcheng",3:"xicheng",4:"haidian",5:"chaoyang",6:"daxing",7:"shijingshan",8:"fengtai"}
@@ -14,11 +12,13 @@ LNG_INDEX = 0
 LAT_INDEX = 1
 EPS = 0.000001
 
+# 获取excel的列对应的数字编号
 def get_excel_index():
     excel_index_list = [chr(i) for i in range(65,91)]
     global excel_dict
     excel_dict = {ch:i for i,ch in enumerate(excel_index_list)}
     #print(excel_dict)
+
 
 #导入警力数据(输入文件xls的路径(不含中文),年,月,开始日期
 def import_police_data(input_file_path , year , month, date_start_day=1):
@@ -33,16 +33,16 @@ def import_police_data(input_file_path , year , month, date_start_day=1):
         for disstrict_name , i in district_row_no.items():
             for j in range(2, ncols):
                 if sheet.cell(i,j).value != '':
-                    police = Police(region = pinyin_hash[disstrict_name],people_cnt=int(sheet.cell(i,j).value),create_time=datetime.datetime(year=year,month=month,day=day_num,hour=j-2,minute=0 ,second=0))
-                    police.save()
+                    pass
+ #                   police = Police(region = pinyin_hash[disstrict_name],people_cnt=int(sheet.cell(i,j).value),create_time=datetime.datetime(year=year,month=month,day=day_num,hour=j-2,minute=0 ,second=0))
+  #                  police.save()
         day_num += 1
-    print "import police data to database seccessfully!"
+    # print("import police data to database seccessfully!")
 
 #导入拥堵延时指数数据
 #input_file_path: 输入文件xls的路径(不含中文)
 def import_crowd_data(input_file_path):
     get_excel_index()
-
 
     file = xlrd.open_workbook(input_file_path)
     file_sheets = file.sheets()
@@ -78,7 +78,7 @@ def import_crowd_data(input_file_path):
                 create_time = datetime.datetime.strptime(create_time_str, "%Y-%m-%d %H:%M")
                 crowd_index = Crowd_Index(region=region,bussiness_area=None,avg_car_speed=avg_car_speed,crowd_index=crowd_index,create_time=create_time)
                 crowd_index.save()
-    print "import crowd data_successful"
+    #print "import crowd data_successful"
 #导入违法数据
 def import_violation_data(input_violation_file,path_pkl_path):
     get_excel_index()
@@ -147,7 +147,7 @@ def import_app_incidence_data(input_app_incidence_file):
             # output_str = str(longitude) + "," + str(latitude) + "," + place + "," + create_time_str + "," + str(region)
             app_incidence = App_Incidence(longitude=longitude,latitude=latitude,place=place,create_time=create_time,region=region)
             app_incidence.save()
-    print "load app incidence data successful!"
+    print("load app incidence data successful!")
 
 #导入122电话事故举报数据
 def import_call_incidence_data(input_call_incidence_file,path_pkl_path):
@@ -213,4 +213,4 @@ def import_call_incidence_data(input_call_incidence_file,path_pkl_path):
                         call_incidence = Call_Incidence(region=region,create_time=create_time,longitude=longitude,latitude=latitude,event_content=event_content)
                         call_incidence.save()
                         break
-    print "import call 122 finished!"
+    print("import call 122 finished!")

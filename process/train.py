@@ -1,7 +1,7 @@
 #coding: utf-8
 
-from models import *
-from helpers import pinyin_hash
+from process.models import *
+from process.helpers import pinyin_hash
 import datetime,math,plotly
 import numpy as np
 import plotly.graph_objs as go
@@ -9,7 +9,7 @@ import plotly.graph_objs as go
 # 输入分钟,按几分钟切割,按duration取整
 def partition_time(minute, duration=10):
     half_duration = duration / 2
-    quotient = minute / duration
+    quotient = int(minute / duration)
     residue = minute % duration
     if residue >= half_duration:
         partition_minute = duration * ( quotient + 1 )
@@ -244,7 +244,7 @@ def preprocess_police(start_time, end_time, duration, region, is_week):
 
     last_dt = None
     last_val = None
-    partitions = (60 / duration)
+    partitions = int(60 / duration)
 
     #循环遍历
     for idx,item in enumerate(polices):
@@ -335,13 +335,13 @@ def pca(data,nRedDim=0,normalise=0):
 def get_data_array(start_time, end_time, region, is_week, duration=10):
     #以下每个数据都是一个dict,键为datetime
     app_incidence = preprocess_app_incidence(start_time, end_time, duration, region, is_week)
-    print "finished get app_incidence data!"
+    print("finished get app_incidence data!")
     violation = preprocess_violation(start_time, end_time, duration, region, is_week)
-    print "finished get violation data!"
+    print("finished get violation data!")
     call_incidence = preprocess_call_incidence(start_time, end_time, duration, region, is_week)
-    print "finished get call_incidence data!"
+    print("finished get call_incidence data!")
     crowd_index = preprocess_crowd_index(start_time,end_time,duration,region,is_week)
-    print "finished get crowd_index data!"
+    print("finished get crowd_index data!")
     datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
     data_arr = [[] for i in range(4)]
 
@@ -361,7 +361,7 @@ def get_data_array(start_time, end_time, region, is_week, duration=10):
 
     row_range = row_maxs - row_mins
     normed_data_array = (np_data_array - row_mins)/row_range
-    print "normalized data successfully!"
+    print("normalized data successfully!")
     return normed_data_array
 #训练函数
 #start_time: 起始时间
@@ -378,18 +378,18 @@ def test_region(evecs, pca_no,start_time, end_time, region, is_week, duration=10
 
     #以下每个数据都是一个dict,键为datetime
     app_incidence = preprocess_app_incidence(start_time, end_time, duration, region, is_week)
-    print "finished get app_incidence data!"
+    print("finished get app_incidence data!")
     violation = preprocess_violation(start_time, end_time, duration, region, is_week)
-    print "finished get violation data!"
+    print("finished get violation data!")
     call_incidence = preprocess_call_incidence(start_time, end_time, duration, region, is_week)
-    print "finished get call_incidence data!"
+    print("finished get call_incidence data!")
     crowd_index = preprocess_crowd_index(start_time,end_time,duration,region,is_week)
-    print "finished get crowd_index data!"
+    print("finished get crowd_index data!")
     datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
     data_arr = [[] for i in range(4)]
     police_data_arr = []
     polices = preprocess_police(start_time, end_time, duration, region, is_week)
-    print "finished get polices data!"
+    print("finished get polices data!")
     for datetime_str in datetime_list:
         if polices[datetime_str] != 0:
             police_data_arr.append(polices[datetime_str])
@@ -412,7 +412,7 @@ def test_region(evecs, pca_no,start_time, end_time, region, is_week, duration=10
 
     row_range = row_maxs - row_mins
     normed_data_array = (np_data_array - row_mins)/row_range
-    print "normalized data successfully!"
+    print("normalized data successfully!")
     if all( evecs[:,pca_no] < np.zeros(len(evecs[:,pca_no]))):
         evecs = evecs * -1
 

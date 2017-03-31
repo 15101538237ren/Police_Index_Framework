@@ -27,7 +27,7 @@
                <div class="form-group">
                     <label for="train_region" class="control-label"><small>测试区域:</small></label>
                     <select id="region_select" class="form-control input-sm" name="train_region" style="width:60px;">
-                          {% for k,v in regions.iteritems %}
+                          {% for k,v in regions.items %}
                             <option value="{{ v }}">{{ k }}</option>
                           {% endfor %}
                     </select>
@@ -35,7 +35,7 @@
                <div class="form-group">
                     <label for="week_agg" class="control-label"><small>星期聚合:</small></label>
                     <select id="region_select" class="form-control input-sm" name="week_agg" style="width:60px;">
-                          {% for k,v in week_agg.iteritems %}
+                          {% for k,v in week_agg.items %}
                               {% ifequal forloop.counter0 0 %}
                                   <option value="{{ v }}" selected="selected">{{ k }}</option>
                               {% else %}
