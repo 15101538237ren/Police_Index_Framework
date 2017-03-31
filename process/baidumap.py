@@ -2,6 +2,11 @@
 
 import urllib,urllib.request ##python2 对应urllib2
 import http.client  ##python2 对应为httplib
+#########
+##Python2
+#import urllib,urllib2
+#import httplib  ##pyton2 对应为httplib
+#########
 import json
 
 
