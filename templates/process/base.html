@@ -1,0 +1,44 @@
+{% load static from staticfiles %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=EmulateIE9" />
+    <title>{% block title %}{% endblock %}</title>
+    <script type="text/javascript" src="{% static "js/jquery-1.11.3.min.js" %}" charset="UTF-8"></script>
+    <link rel="stylesheet" type="text/css" media="screen" href="{% static "css/bootstrap.css" %}" />
+    <link rel="stylesheet" type="text/css" media="screen" href="{% static "css/bootstrap-datetimepicker.css" %}" />
+    <link rel="stylesheet" type="text/css" media="screen" href="{% static "css/bootstrap-table.css" %}" />
+    <script type="text/javascript" src="{% static "js/common.js" %}" charset="UTF-8"></script>
+    <script type="text/javascript" src="{% static "js/bootstrap.js" %}" ></script>
+    <script type="text/javascript" src="{% static "js/bootstrap-datetimepicker.js" %}" charset="UTF-8" ></script>
+    <script type="text/javascript" src="{% static "js/bootstrap-datetimepicker.zh-CN.js" %}" charset="UTF-8" ></script>
+    <script type="text/javascript" src="{% static "js/bootstrap-table.js" %}" charset="UTF-8"></script>
+    <script type="text/javascript" src="{% static "js/bootstrap-checkboxlist.js" %}" charset="UTF-8"></script>
+    <script type="text/javascript" src="{% static "js/jquery.history.js" %}"></script>
+
+  <script src="{% static "js/html5shiv.min.js" %}"></script>
+  <script src="{% static "js/respond.min.js" %}"></script>
+    <style type="text/css">
+            body{margin-top:60px;padding-bottom: 60px;}
+
+    </style>
+    <script type="text/javascript" src="{% static "js/bootstrap-table-zh-CN.min.js" %}" charset="UTF-8"></script>
+    <link rel="stylesheet" type="text/css" media="screen" href="{% static "css/loaders.css" %}" />
+    <script type="text/javascript" src="{% static "js/loaders.css.js" %}"></script>
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+    {% block content %}
+    {% endblock %}
+<div id="loading_div" class="alert alert-default" style="background:#666666;width:100px;height:100px;text-align:center;padding-top:50px;position:fixed;left:50%;top:50%;display:none;margin-left:-55px;margin-top:-55px;">
+    <div class="loader-inner line-spin-fade-loader" style="margin-left:35px;background:#666666;">
+    </div>
+</div>
+<div id="loading_div2" class="alert alert-default" style="background:#666666;width:300px;height:50px;text-align:center;padding-top:15px;position:fixed;left:50%;top:50%;display:none;margin-left:-150px;margin-top:-25px;">
+    <div><label style="color:White;" id="loading_text"></label></div>
+</div>
+</body>
+</html>

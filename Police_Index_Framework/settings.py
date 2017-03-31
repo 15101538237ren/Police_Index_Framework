@@ -33,7 +33,7 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 STATIC_URL = '/static/'
 STATIC_ROOT = normpath(join(BASE_DIR,  'static', 'root'))
 STATICFILES_DIRS = (
-    normpath(join(BASE_DIR, 'static'))
+    normpath(join(BASE_DIR, 'static')),
 )
 
 # Application definition
@@ -45,6 +45,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'bootstrap3',
     'process',
 )
 
@@ -116,4 +117,3 @@ USE_TZ = False
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
 
-STATIC_URL = '/static/'

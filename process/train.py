@@ -373,7 +373,7 @@ def train(start_time, end_time, region, is_week, duration=10):
     x,y,evals,evecs = pca(np.transpose(normed_data_array),nRedDim=4,normalise=0)
 
     return evecs
-def test_region(evecs, pca_count,start_time, end_time, region, is_week, duration=10):
+def test_region(evecs, pca_no,start_time, end_time, region, is_week, duration=10):
     #获取4种类型数据的矩阵
 
     #以下每个数据都是一个dict,键为datetime
@@ -413,9 +413,11 @@ def test_region(evecs, pca_count,start_time, end_time, region, is_week, duration
     row_range = row_maxs - row_mins
     normed_data_array = (np_data_array - row_mins)/row_range
     print "normalized data successfully!"
+    if all( evecs[:,pca_no] < np.zeros(len(evecs[:,pca_no]))):
+        evecs = evecs * -1
 
-    evecs_arr = np.array(evecs[:,:pca_count])
-    transformed_arr = np.array(np.matrix(np.transpose(normed_data_array)) * np.matrix(evecs_arr.real))
+    evecs_arr = np.array(evecs[:,pca_no])
+    transformed_arr = np.array(np.matrix(np.transpose(normed_data_array)) * np.transpose(np.matrix(evecs_arr.real)))
 
     trace = go.Scatter(
         x = transformed_arr[:,0],
