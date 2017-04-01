@@ -3,18 +3,7 @@
 {% block title %}PCA结果{% endblock %}
 
 {% block head %}
-    <link rel="stylesheet" type="text/css" media="screen" href="{% static "css/jquery-confirm.min.css" %}" />
-    <script type="text/javascript" src="{% static "js/jquery-confirm.min.js" %}" charset="UTF-8"></script>
-    <script type="text/javascript">
-    function flash(text,time)
-    {
-        $("#loading_text").html(text);
-        $("#loading_div2").css('display','block');
-        if(time!=0)setTimeout(function(){
-            $("#loading_div2").css('display','none');
-        },time);
-    }
-    </script>
+
 {% endblock %}
 
 {% block content %}

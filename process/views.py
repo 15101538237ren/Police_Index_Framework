@@ -6,7 +6,7 @@ from process.helpers import pinyin_hash,week_hash
 import datetime
 # evecs_tmp = np.array()
 def index(request):
-    pass
+    return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
 def train(request):
     if request.method == 'GET':
         regions = region_hash
