@@ -7,6 +7,8 @@ import numpy as np
 import plotly.graph_objs as go
 from scipy.optimize import leastsq
 
+PCA_NO = 0
+
 ###需要拟合的函数func及误差error###
 def func(p,x):
     k,b=p
@@ -17,24 +19,12 @@ def error(p,x,y):
 
 # 输入分钟,按几分钟切割,按duration取整
 def partition_time(minute, duration=10):
-    half_duration = duration / 2
-    quotient = int(minute / duration)
-    residue = minute % duration
-    if residue >= half_duration:
-        partition_minute = duration * ( quotient + 1 )
-    else:
-        partition_minute = duration * quotient
-    return partition_minute
+    quotient = int(int(minute / duration) * duration)
+    return quotient
 
 def format_time(idt, format):
     incidence_minute = partition_time(idt.minute,10)
-    if idt.hour ==23 and incidence_minute == 60:
-        incidence_minute = 50
-        incidence_dt = datetime.datetime(idt.year,idt.month,idt.day,idt.hour,incidence_minute,0,0)
-    elif incidence_minute == 60:
-        incidence_dt = datetime.datetime(idt.year,idt.month,idt.day,idt.hour + 1,0,0,0)
-    else:
-        incidence_dt = datetime.datetime(idt.year,idt.month,idt.day,idt.hour,incidence_minute,0,0)
+    incidence_dt = datetime.datetime(idt.year,idt.month,idt.day,idt.hour,incidence_minute,0,0)
     ct_time_str = incidence_dt.strftime(format)
     return ct_time_str
 
@@ -43,7 +33,6 @@ def format_time(idt, format):
 def generate_str_arr_from_date_to_date(from_date,to_date,duration_minute):
 
     dt_now = from_date
-
     result_arr = []
     time_delta=datetime.timedelta(minutes=duration_minute)
     while (dt_now < to_date):
@@ -338,10 +327,10 @@ def pca(data,nRedDim=0,normalise=0):
     # 产生新的数据矩阵
     x = np.dot(np.transpose(evecs),np.transpose(data))
     # 重新计算原数据
-    y=np.transpose(np.dot(evecs,x))+m
+    y = np.transpose(np.dot(evecs,x)) + m
     return x,y,evals,evecs
 #获取4中类型数据的矩阵,包括预处理,Normalize
-def get_data_array(start_time, end_time, region, is_week, duration=10):
+def get_data_array(start_time, end_time, region, is_week, duration=10, is_calc_police = False, is_normalize=1):
     #以下每个数据都是一个dict,键为datetime
     app_incidence = preprocess_app_incidence(start_time, end_time, duration, region, is_week)
     print("finished get app_incidence data!")
@@ -353,24 +342,45 @@ def get_data_array(start_time, end_time, region, is_week, duration=10):
     print("finished get crowd_index data!")
     datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
     data_arr = [[] for i in range(4)]
-
+    if(is_calc_police == True):
+        police_data_arr = []
+        polices = preprocess_police(start_time, end_time, duration, region, is_week)
+        print("finished get polices data!")
     for datetime_str in datetime_list:
-        data_arr[0].append(float(app_incidence[datetime_str]))
-        data_arr[1].append(float(violation[datetime_str]))
-        data_arr[2].append(float(call_incidence[datetime_str]))
-        data_arr[3].append(float(crowd_index[datetime_str]))
+        if(is_calc_police == True):
+            if polices[datetime_str] != 0:
+                police_data_arr.append(polices[datetime_str])
+                data_arr[0].append(float(app_incidence[datetime_str]))
+                data_arr[1].append(float(violation[datetime_str]))
+                data_arr[2].append(float(call_incidence[datetime_str]))
+                data_arr[3].append(float(crowd_index[datetime_str]))
+        else:
+            data_arr[0].append(float(app_incidence[datetime_str]))
+            data_arr[1].append(float(violation[datetime_str]))
+            data_arr[2].append(float(call_incidence[datetime_str]))
+            data_arr[3].append(float(crowd_index[datetime_str]))
+
     np_data_array = np.array(data_arr)
 
     (rows,cols) = np_data_array.shape
-    row_mins = np_data_array.min(axis=1)
-    row_mins = np.repeat(row_mins,cols).reshape((rows,cols))
 
-    row_maxs = np_data_array.max(axis=1)
-    row_maxs = np.repeat(row_maxs,cols).reshape((rows,cols))
-
-    row_range = row_maxs - row_mins
-    normed_data_array = (np_data_array - row_mins)/row_range
+    if(is_normalize == 1):
+        row_mins = np_data_array.min(axis=1)
+        row_mins_tmp = np.repeat(row_mins, cols).reshape((rows, cols))
+        row_maxs = np_data_array.max(axis=1)
+        row_maxs_tmp = np.repeat(row_maxs, cols).reshape((rows, cols))
+        row_range = row_maxs_tmp - row_mins_tmp
+        normed_data_array = (np_data_array - row_mins_tmp)/row_range
+    else:
+        row_mins = 0  ##这个步骤row_mins和row_maxs没有用到
+        row_maxs = 0
+        normed_data_array = np_data_array
     print("normalized data successfully!")
+    if(is_calc_police == True):
+        police_data_arr = np.array(police_data_arr)
+        polices_max = float(police_data_arr.max())
+        normed_polices = police_data_arr / polices_max
+        return [normed_data_array, normed_polices, row_mins, row_maxs]
     return [normed_data_array, row_mins, row_maxs]
 #训练函数
 #start_time: 起始时间
@@ -380,7 +390,12 @@ def train(start_time, end_time, region, is_week, duration=10):
     #获取4种类型数据的矩阵
     [normed_data_array, row_mins, row_maxs] = get_data_array(start_time, end_time, region, is_week, duration)
     x,y,evals,evecs = pca(np.transpose(normed_data_array),nRedDim=4,normalise=0)
+    pca_no = 0
+    if all( evecs[:,pca_no] < np.zeros(len(evecs[:,pca_no]))):
+        evecs = evecs * -1
     return [evecs, row_mins, row_maxs]
+
+
 def test_region(evecs, pca_no,start_time, end_time, region, is_week, duration=10):
     #获取4种类型数据的矩阵
 
@@ -494,20 +509,86 @@ def test_region(evecs, pca_no,start_time, end_time, region, is_week, duration=10
                         zerolinewidth=3,
                     ))
     plotly.offline.plot({"data" : data , "layout" : layout})
+###
+# evecs: 表示特征向量
+# pca_no: 表示主成分的编号
+# start_time: 开始时间
+# end_time: 结束时间
+# duration: 时间间隔
+# region: 区域编号
+# is_week: 表示是否按照星期聚合
+###
+def getNormedDataArray(evecs, pca_no, start_time, end_time, duration, region, is_week):
+    [normed_data_array, normed_polices, row_mins, row_maxs] = get_data_array(start_time, end_time, region, is_week, duration=10, is_calc_police=True)
+    if all(evecs[:, pca_no] < np.zeros(len(evecs[:, pca_no]))):
+        evecs = evecs * -1
 
+    evecs_arr = np.array(evecs[:, pca_no])
+    transformed_arr = np.array(np.matrix(np.transpose(normed_data_array)) * np.transpose(np.matrix(evecs_arr.real)))
+    #返回第一个主成分的值
+    return [transformed_arr[:, 0], normed_polices]
+
+def saveTarinParameter(evecs, row_mins, row_maxs, start_time, end_time, duration, region_id, is_week, create_time):
+    PCA_NO = 0
+    [PCA_x, Police_y] = getNormedDataArray(evecs, PCA_NO, start_time, end_time, duration, region_id, is_week)
+    # 下面的二维array第二个0表示PCA_num
+    app_incidence = evecs[0, PCA_NO]
+    violation = evecs[1, PCA_NO]
+    call_incidence = evecs[2, PCA_NO]
+    crowd_index = evecs[3, PCA_NO]
+    p0 = [0.6, 0.12]
+    Para = leastsq(error, p0, args=(PCA_x, Police_y))  # 把error函数中除了p以外的参数打包到args中k2,b2=Para[0]
+    train_parameter = Train_Parameter(xmin=row_mins[0], xmax=row_maxs[0], ymin=row_mins[1], ymax=row_maxs[1],
+                                      zmin=row_mins[2], zmax=row_maxs[2], wmin=row_mins[3], wmax=row_maxs[3],
+                                      cx=crowd_index, cy=violation, cz=app_incidence, cw=call_incidence,
+                                      a=p0[0], b=p0[1], create_time=create_time, region=region_id)
+    train_parameter.save()
 
 def trainRegion(start_time, end_time, is_region, is_week, duration=10):
+
+    create_time = datetime.datetime.strptime("2017-02-01 0:0:0", "%Y-%m-%d %H:%M:%S")
     if(is_region == 0):
-        #train传入的参数0表示综合区
-        [evecs, row_mins, row_maxs] = train(start_time, end_time, 0, is_week, duration)
-        p0 = [0.6, 0.12]
-
-        Para = leastsq(error, p0, args=(Xi, Yi))  # 把error函数中除了p以外的参数打包到args中k2,b2=Para[0]
-
+        region_id = 0
+        [evecs, row_mins, row_maxs] = train(start_time, end_time, region_id, is_week, duration)
+        for key in pinyin_hash.keys():
+            region_id_tmp = pinyin_hash[key]
+            saveTarinParameter(evecs, row_mins, row_maxs, start_time, end_time, duration, region_id_tmp, is_week, create_time)
     else:
         for key in pinyin_hash.keys():
             region_id = pinyin_hash[key]
             [evecs, row_mins, row_maxs] = train(start_time, end_time, region_id, is_week, duration)
+            saveTarinParameter(evecs, row_mins, row_maxs, start_time, end_time, duration, region_id, is_week,
+                               create_time)
+##
+#按照时间点来查询
+#query_time: 驶入的查询时间点，datetime类型
+##
+def getDataFromeTime(query_time, region, duration=10):
+    time_delta = datetime.timedelta(minutes=duration)
+    end_time = query_time + time_delta
+    return [query_time, end_time, get_data_array(query_time, end_time, region, is_week=0, duration=duration, is_calc_police=False, is_normalize=0)]
+
+def OutputRegionIndex(query_time, duration=10):
+    train_parameter = Train_Parameter.objects.order_by('-create_time')[0]  #获取最新的Train_Parameter
+    region_pca = {}
+    for key in pinyin_hash.keys():
+        region_id = pinyin_hash[key]
+        [start_time, end_time, result_data] = getDataFromeTime(query_time, region_id, duration=duration)
+        normed_data_array = result_data[0]  ##表示原始4种数据
+        PCA_NO = 0
+        evecs = [float(train_parameter.cx), float(train_parameter.cy), float(train_parameter.cz), float(train_parameter.cw)]
+        if all(evecs < np.zeros(len(evecs))):
+            evecs = evecs * -1
+        evecs_arr = np.array(evecs)
+        #print("region_id: " + str(region_id) + ", evecs = ")
+        #print(evecs_arr)
+        #print("")
+        transformed_arr = np.matrix(np.transpose(normed_data_array)) * np.transpose(np.matrix(evecs_arr.real))
+        PCA_x = transformed_arr[0, 0]  #取第一个主成分的值
+        region_pca[region_id] = PCA_x
+    print(region_pca)
+    return region_pca
+
 
 if __name__ == "__main__":
     pass

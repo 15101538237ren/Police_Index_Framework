@@ -78,7 +78,7 @@ class Train_Parameter(PermanentModel):
     b = models.DecimalField('b', max_digits=10, decimal_places=4, default=None)
     create_time = models.DateTimeField('时间')
     region = models.SmallIntegerField('区县编号',default=None)
-    group = models.IntegerField('大队编号', default=None)
+    group = models.IntegerField('大队编号', default=0)
     comment = models.TextField('备注', default='train')
     def __unicode__(self):
         return u'时间:'+ str(self.create_time) + u',备注:'+ str(self.comment) + u',最小延迟指数:' + str(self.xmin) + u',最大延迟指数:' + str(self.xmax) + u',最小APP举报数:' + str(self.ymin) + u'最大APP举报数:'\
