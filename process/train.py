@@ -5,6 +5,15 @@ from process.helpers import pinyin_hash
 import datetime,math,plotly
 import numpy as np
 import plotly.graph_objs as go
+from scipy.optimize import leastsq
+
+###需要拟合的函数func及误差error###
+def func(p,x):
+    k,b=p
+    return k*x+b
+
+def error(p,x,y):
+    return func(p,x)-y #x、y都是列表，故返回值也是个列表
 
 # 输入分钟,按几分钟切割,按duration取整
 def partition_time(minute, duration=10):
@@ -362,17 +371,16 @@ def get_data_array(start_time, end_time, region, is_week, duration=10):
     row_range = row_maxs - row_mins
     normed_data_array = (np_data_array - row_mins)/row_range
     print("normalized data successfully!")
-    return normed_data_array
+    return [normed_data_array, row_mins, row_maxs]
 #训练函数
 #start_time: 起始时间
 #end_time: 结束时间
 #duration: 时间间隔
 def train(start_time, end_time, region, is_week, duration=10):
     #获取4种类型数据的矩阵
-    normed_data_array = get_data_array(start_time, end_time, region, is_week, duration)
+    [normed_data_array, row_mins, row_maxs] = get_data_array(start_time, end_time, region, is_week, duration)
     x,y,evals,evecs = pca(np.transpose(normed_data_array),nRedDim=4,normalise=0)
-
-    return evecs
+    return [evecs, row_mins, row_maxs]
 def test_region(evecs, pca_no,start_time, end_time, region, is_week, duration=10):
     #获取4种类型数据的矩阵
 
@@ -486,6 +494,20 @@ def test_region(evecs, pca_no,start_time, end_time, region, is_week, duration=10
                         zerolinewidth=3,
                     ))
     plotly.offline.plot({"data" : data , "layout" : layout})
+
+
+def trainRegion(start_time, end_time, is_region, is_week, duration=10):
+    if(is_region == 0):
+        #train传入的参数0表示综合区
+        [evecs, row_mins, row_maxs] = train(start_time, end_time, 0, is_week, duration)
+        p0 = [0.6, 0.12]
+
+        Para = leastsq(error, p0, args=(Xi, Yi))  # 把error函数中除了p以外的参数打包到args中k2,b2=Para[0]
+
+    else:
+        for key in pinyin_hash.keys():
+            region_id = pinyin_hash[key]
+            [evecs, row_mins, row_maxs] = train(start_time, end_time, region_id, is_week, duration)
 
 if __name__ == "__main__":
     pass
