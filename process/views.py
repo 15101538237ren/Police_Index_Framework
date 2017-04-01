@@ -6,6 +6,8 @@ from process.helpers import pinyin_hash,week_hash
 import datetime
 # evecs_tmp = np.array()
 def index(request):
+    pass
+def train(request):
     if request.method == 'GET':
         regions = region_hash
         week_agg = week_hash

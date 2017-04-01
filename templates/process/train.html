@@ -1,6 +1,6 @@
 {% extends "process/base.html" %}
 {% load static from staticfiles %}
-{% block title %}主页{% endblock %}
+{% block title %}训练页面{% endblock %}
 {% block head %}
     <link rel="stylesheet" type="text/css" media="screen" href="{% static "css/jquery-confirm.min.css" %}" />
     <script type="text/javascript" src="{% static "js/jquery-confirm.min.js" %}" charset="UTF-8"></script>
@@ -21,7 +21,7 @@
   <div class="row">
     <div id="toolbar">
            <div class="form-inline" role="form">
-            <form class="form-inline"  action="{% url 'process:index' %}" method="POST">
+            <form class="form-inline"  action="{% url 'process:train' %}" method="POST">
                <div class="form-group">
                     <label for="train_region" class="control-label"><small>训练区域:</small></label>
                     <select id="region_select" class="form-control input-sm" name="train_region" style="width:60px;">

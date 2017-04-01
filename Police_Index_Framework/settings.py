@@ -93,8 +93,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'police_index',
-        'USER': 'root',
-        'PASSWORD': '',
+        'USER': 'ren',
+        'PASSWORD': 'harry123',
         'HOST': 'localhost',
         'PORT': '3306',
     }
