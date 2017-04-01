@@ -570,11 +570,19 @@ def getDataFromeTime(query_time, region, duration=10):
 
 def OutputRegionIndex(query_time, duration=10):
     train_parameter = Train_Parameter.objects.order_by('-create_time')[0]  #获取最新的Train_Parameter
+    Index_range = 3
     region_pca = {}
     for key in pinyin_hash.keys():
         region_id = pinyin_hash[key]
+        ##这里调用数据的时候不做normalize
         [start_time, end_time, result_data] = getDataFromeTime(query_time, region_id, duration=duration)
-        normed_data_array = result_data[0]  ##表示原始4种数据
+        data_array = result_data[0]  ##表示原始4种数据, 4*1的矩阵
+        normed_data_min_list = [float(train_parameter.xmin), float(train_parameter.ymin), float(train_parameter.zmin), float(train_parameter.wmin)]
+        normed_data_list = [float(train_parameter.xmax - train_parameter.xmin), float(train_parameter.ymax - train_parameter.ymin),
+                            float(train_parameter.zmax - train_parameter.zmin), float(train_parameter.wmax - train_parameter.wmin)]
+        normed_data_min = np.transpose(np.matrix(normed_data_min_list))  ##利用转置变成4*1的矩阵
+        normed_data_range = np.transpose(np.matrix(normed_data_list))
+        normed_data_array = (data_array - normed_data_min)/normed_data_range
         PCA_NO = 0
         evecs = [float(train_parameter.cx), float(train_parameter.cy), float(train_parameter.cz), float(train_parameter.cw)]
         if all(evecs < np.zeros(len(evecs))):
@@ -582,10 +590,11 @@ def OutputRegionIndex(query_time, duration=10):
         evecs_arr = np.array(evecs)
         #print("region_id: " + str(region_id) + ", evecs = ")
         #print(evecs_arr)
-        #print("")
+        #print(normed_data_array)
         transformed_arr = np.matrix(np.transpose(normed_data_array)) * np.transpose(np.matrix(evecs_arr.real))
         PCA_x = transformed_arr[0, 0]  #取第一个主成分的值
-        region_pca[region_id] = PCA_x
+        #print(PCA_x)
+        region_pca[region_id] = Index_range * PCA_x
     print(region_pca)
     return region_pca
 
