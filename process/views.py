@@ -6,8 +6,8 @@ from process.helpers import pinyin_hash,week_hash
 import datetime
 # evecs_tmp = np.array()
 def index(request):
-    region = int(request.POST.get("train_region", 0))
-    week_agg = int(request.POST.get("week_agg", 0))
+    region = 1
+    week_agg = 0
     from_date = request.POST.get("date_start", "2017-02-01")
     start_time = "0:0:0"
     end_time = "23:59:59"
@@ -15,7 +15,9 @@ def index(request):
     start_dt = datetime.datetime.strptime(from_date + " " + start_time, "%Y-%m-%d %H:%M:%S")
     end_dt = datetime.datetime.strptime(end_date + " " + end_time, "%Y-%m-%d %H:%M:%S")
     duration = 10
-    trainRegion(start_dt, end_dt, region, week_agg, duration)
+    #trainRegion(start_dt, end_dt, region, week_agg, duration)
+    query_time = datetime.datetime.strptime("2017-02-10 11:30:00", "%Y-%m-%d %H:%M:%S")
+    OutputRegionIndex(query_time, duration=10)
     return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
 def a(request):
     if request.method == 'GET':

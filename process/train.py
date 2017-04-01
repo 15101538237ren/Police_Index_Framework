@@ -363,16 +363,17 @@ def get_data_array(start_time, end_time, region, is_week, duration=10, is_calc_p
     np_data_array = np.array(data_arr)
 
     (rows,cols) = np_data_array.shape
-    row_mins = np_data_array.min(axis=1)
-    row_mins = np.repeat(row_mins,cols).reshape((rows,cols))
-
-    row_maxs = np_data_array.max(axis=1)
-    row_maxs = np.repeat(row_maxs,cols).reshape((rows,cols))
 
     if(is_normalize == 1):
-        row_range = row_maxs - row_mins
-        normed_data_array = (np_data_array - row_mins)/row_range
+        row_mins = np_data_array.min(axis=1)
+        row_mins_tmp = np.repeat(row_mins, cols).reshape((rows, cols))
+        row_maxs = np_data_array.max(axis=1)
+        row_maxs_tmp = np.repeat(row_maxs, cols).reshape((rows, cols))
+        row_range = row_maxs_tmp - row_mins_tmp
+        normed_data_array = (np_data_array - row_mins_tmp)/row_range
     else:
+        row_mins = 0  ##这个步骤row_mins和row_maxs没有用到
+        row_maxs = 0
         normed_data_array = np_data_array
     print("normalized data successfully!")
     if(is_calc_police == True):
@@ -389,6 +390,9 @@ def train(start_time, end_time, region, is_week, duration=10):
     #获取4种类型数据的矩阵
     [normed_data_array, row_mins, row_maxs] = get_data_array(start_time, end_time, region, is_week, duration)
     x,y,evals,evecs = pca(np.transpose(normed_data_array),nRedDim=4,normalise=0)
+    pca_no = 0
+    if all( evecs[:,pca_no] < np.zeros(len(evecs[:,pca_no]))):
+        evecs = evecs * -1
     return [evecs, row_mins, row_maxs]
 
 
@@ -546,7 +550,9 @@ def trainRegion(start_time, end_time, is_region, is_week, duration=10):
     if(is_region == 0):
         region_id = 0
         [evecs, row_mins, row_maxs] = train(start_time, end_time, region_id, is_week, duration)
-        saveTarinParameter(evecs, row_mins, row_maxs, start_time, end_time, duration, region_id, is_week, create_time)
+        for key in pinyin_hash.keys():
+            region_id_tmp = pinyin_hash[key]
+            saveTarinParameter(evecs, row_mins, row_maxs, start_time, end_time, duration, region_id_tmp, is_week, create_time)
     else:
         for key in pinyin_hash.keys():
             region_id = pinyin_hash[key]
@@ -560,7 +566,7 @@ def trainRegion(start_time, end_time, is_region, is_week, duration=10):
 def getDataFromeTime(query_time, region, duration=10):
     time_delta = datetime.timedelta(minutes=duration)
     end_time = query_time + time_delta
-    return [query_time, end_time, get_data_array(query_time, end_time, region, duration,is_calc_police=True, is_normalize=0)]
+    return [query_time, end_time, get_data_array(query_time, end_time, region, is_week=0, duration=duration, is_calc_police=False, is_normalize=0)]
 
 def OutputRegionIndex(query_time, duration=10):
     train_parameter = Train_Parameter.objects.order_by('-create_time')[0]  #获取最新的Train_Parameter
@@ -570,13 +576,17 @@ def OutputRegionIndex(query_time, duration=10):
         [start_time, end_time, result_data] = getDataFromeTime(query_time, region_id, duration=duration)
         normed_data_array = result_data[0]  ##表示原始4种数据
         PCA_NO = 0
-        evecs = [[train_parameter.cx, train_parameter.cy, train_parameter.cz, train_parameter.cw]]
-        if all(evecs[:, PCA_NO] < np.zeros(len(evecs[:, PCA_NO]))):
+        evecs = [float(train_parameter.cx), float(train_parameter.cy), float(train_parameter.cz), float(train_parameter.cw)]
+        if all(evecs < np.zeros(len(evecs))):
             evecs = evecs * -1
-        evecs_arr = np.array(evecs[:, PCA_NO])
-        transformed_arr = np.array(np.matrix(np.transpose(normed_data_array)) * np.transpose(np.matrix(evecs_arr.real)))
-        PCA_x = transformed_arr[:, 0]  #取第一个主成分的值
+        evecs_arr = np.array(evecs)
+        #print("region_id: " + str(region_id) + ", evecs = ")
+        #print(evecs_arr)
+        #print("")
+        transformed_arr = np.matrix(np.transpose(normed_data_array)) * np.transpose(np.matrix(evecs_arr.real))
+        PCA_x = transformed_arr[0, 0]  #取第一个主成分的值
         region_pca[region_id] = PCA_x
+    print(region_pca)
     return region_pca
 
 
