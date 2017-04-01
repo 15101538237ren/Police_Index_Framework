@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-import xlrd,os,datetime,pytz,pickle,csv
+import xlrd,os,datetime,pytz,pickle,csv,calendar
 from process.models import *
 from process.helpers import pinyin_hash,check_point,region_hash2
 from process.baidumap import BaiduMap
 
 district_row_no = {"dongcheng":3, "xicheng":4, "chaoyang":5, "haidian":6,"fengtai":7,"shijingshan":8,"daxing":19}
 sheet_idx = {2:"dongcheng",3:"xicheng",4:"haidian",5:"chaoyang",6:"daxing",7:"shijingshan",8:"fengtai"}
+dadui_hash = {u"中关村(西苑)队":u"海淀",u"樱桃园大队":u"西城",u"亚运村队":u"朝阳",u"西外队":u"西城",u"西四队":u"西城",u"西单队":u"西城",u"温泉队":u"海淀",u"天坛大队":u"东城",u"双桥队":u"朝阳",u"清河队":u"海淀",u"前门大队":u"东城",u"劲松(东三环)队":u"朝阳",u"机场队":u"朝阳",u"黄庄(西三环)队":u"海淀",u"呼家楼队":u"朝阳",u"和平里队":u"东城",u"广安门大队":u"西城",u"公主坟队":u"海淀",u"府右街队":u"西城",u"东外队":u"朝阳",u"东四队":u"东城",u"东单队":u"东城",u"大红门队":u"丰台",u"方庄队":u"丰台",u"丰北队":u"丰台",u"卢沟桥队":u"丰台",u"西站队":u"丰台",}
 excel_dict = {}
 MAXINT = 999999999
 LNG_INDEX = 0
@@ -19,6 +20,10 @@ def get_excel_index():
     excel_dict = {ch:i for i,ch in enumerate(excel_index_list)}
     #print(excel_dict)
 
+def unicode_csv_reader(gbk_data, dialect=csv.excel, **kwargs):
+    csv_reader = csv.reader(gbk_data, dialect=dialect, **kwargs)
+    for row in csv_reader:
+        yield [unicode(cell, 'gbk') for cell in row]
 
 #导入警力数据(输入文件xls的路径(不含中文),年,月,开始日期
 def import_police_data(input_file_path , year , month, date_start_day=1):
@@ -214,3 +219,23 @@ def import_call_incidence_data(input_call_incidence_file,path_pkl_path):
                         call_incidence.save()
                         break
     print("import call 122 finished!")
+
+def preprocess_whole_122(input_dir,month_list):
+    for month in month_list:
+        input_file_path = input_dir + os.sep + str(month) + ".csv"
+
+        reader = unicode_csv_reader(open(input_file_path))
+        for i,row in enumerate(reader):
+            dadui_name = row[1]
+            if dadui_name in dadui_hash.keys():
+                district_no = str(region_hash[dadui_hash[dadui_name]])
+                date_time = datetime.datetime.strptime(row[0],"%Y/%m/%d %H:%M:%S")
+                date_time_str = date_time.strftime("%Y-%m-%d %H:%M:%S")
+        duration_minute = 10
+        tz=pytz.timezone('Asia/Shanghai')
+        year = 2016
+        from_date = datetime.datetime(year,month,1,0,0,0,0,tzinfo=tz)
+        firstDayWeekDay, monthRange = calendar.monthrange(year, month)
+        to_date = datetime.datetime(year,month,monthRange,23,59,59,0,tzinfo=tz)
+        preprocess_inmediate_file_to_standard(out_file_path,out_dir,from_date,to_date,duration_minute)
+        print "%d month write successfully!" % month
