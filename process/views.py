@@ -6,6 +6,18 @@ from process.helpers import pinyin_hash,week_hash
 import datetime
 # evecs_tmp = np.array()
 def index(request):
+    region = int(request.POST.get("train_region", 0))
+    week_agg = int(request.POST.get("week_agg", 0))
+    from_date = request.POST.get("date_start", "2017-02-01")
+    start_time = "0:0:0"
+    end_time = "23:59:59"
+    end_date = request.POST.get("date_end", "2017-02-28")
+    start_dt = datetime.datetime.strptime(from_date + " " + start_time, "%Y-%m-%d %H:%M:%S")
+    end_dt = datetime.datetime.strptime(end_date + " " + end_time, "%Y-%m-%d %H:%M:%S")
+    duration = 10
+    trainRegion(start_dt, end_dt, region, week_agg, duration)
+    return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
+def a(request):
     if request.method == 'GET':
         regions = region_hash
         week_agg = week_hash
