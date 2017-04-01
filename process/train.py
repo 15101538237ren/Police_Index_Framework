@@ -545,8 +545,7 @@ def saveTarinParameter(evecs, row_mins, row_maxs, start_time, end_time, duration
     train_parameter.save()
 
 def trainRegion(start_time, end_time, is_region, is_week, duration=10):
-
-    create_time = datetime.datetime.strptime("2017-02-01 0:0:0", "%Y-%m-%d %H:%M:%S")
+    create_time = datetime.datetime.now()
     if(is_region == 0):
         region_id = 0
         [evecs, row_mins, row_maxs] = train(start_time, end_time, region_id, is_week, duration)
@@ -594,7 +593,7 @@ def OutputRegionIndex(query_time, duration=10):
         transformed_arr = np.matrix(np.transpose(normed_data_array)) * np.transpose(np.matrix(evecs_arr.real))
         PCA_x = transformed_arr[0, 0]  #取第一个主成分的值
         #print(PCA_x)
-        region_pca[region_id] = Index_range * PCA_x
+        region_pca[region_id] = int(round(Index_range * PCA_x,2)*100)
     print(region_pca)
     return region_pca
 

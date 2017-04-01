@@ -3,10 +3,12 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from process.train import *
 from process.helpers import pinyin_hash,week_hash
+from import_data import *
+from helpers import region_hash_anti
 import datetime
 # evecs_tmp = np.array()
 def index(request):
-    region = 1
+    is_region = 1
     week_agg = 0
     from_date = request.POST.get("date_start", "2017-02-01")
     start_time = "0:0:0"
@@ -15,9 +17,15 @@ def index(request):
     start_dt = datetime.datetime.strptime(from_date + " " + start_time, "%Y-%m-%d %H:%M:%S")
     end_dt = datetime.datetime.strptime(end_date + " " + end_time, "%Y-%m-%d %H:%M:%S")
     duration = 10
-    #trainRegion(start_dt, end_dt, region, week_agg, duration)
+    # trainRegion(start_time = start_dt, end_time = end_dt, is_region = is_region, is_week= week_agg, duration=10)
     query_time = datetime.datetime.strptime("2017-02-10 11:30:00", "%Y-%m-%d %H:%M:%S")
     region_pca = OutputRegionIndex(query_time, duration=10)
+    region_labels = {}
+    for k,v in region_pca.iteritems():
+        region_name = region_hash_anti[k]
+        region_index = v
+        label = region_name + u":" + str(v/100.0)
+        region_labels[k]= label
     return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
 def a(request):
     if request.method == 'GET':

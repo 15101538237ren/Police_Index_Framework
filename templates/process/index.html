@@ -3,6 +3,26 @@
 {% block title %}主页{% endblock %}
 {% block head %}
 <script type="text/javascript" src="{% static "js/data.js" %}"></script>
+    <script>
+        var gradient = new gradientColor('#00FF00','#FF0000',300);
+        var region_colors = new Array();
+        {% for k,v in region_pca.items %}
+            region_colors["{{ k }}"] = {{ v }};
+        {% endfor %}
+        function get_region_color(region_id)
+        {
+            return region_colors[region_id];
+        }
+        var region_labels = new Array();
+        {% for k,v in region_labels.items %}
+            region_labels["{{ k }}"] = "{{ v }}";
+        {% endfor %}
+        function get_region_label(region_id)
+        {
+            return region_labels[region_id];
+        }
+
+    </script>
 {% endblock %}
 {% block content %}
     <div class="container">
@@ -26,22 +46,27 @@
     map.addControl(top_left_navigation);
     map.enableKeyboard();
 
-    var polygon_options = {
-            strokeColor:"blue", strokeWeight:2, strokeOpacity:0.5
-        };
     for ( var region_id in data ){
         var points = [];  // 添加海量点数据
 
         for (var i = 0; i < data[region_id].length; i++) {
                 points.push(new BMap.Point(data[region_id][i][0], data[region_id][i][1]));
         }
-
-        var polygon = new BMap.Polygon(points, polygon_options);  // 初始化PointCollection
+        var geo_center_point = new BMap.Point(geocenter[region_id][0],geocenter[region_id][1]);
+        var marker = new BMap.Marker(geo_center_point);  // 创建标注
+	    map.addOverlay(marker);              // 将标注添加到地图中
+        var label = new BMap.Label(get_region_label(region_id),{position :geo_center_point,offset   : new BMap.Size(20, -10)});
+        label.setStyle({
+			 color : "white",
+			 fontSize : "12px",
+             border :"0",
+             backgroundColor :"0.0"
+		 });
+        marker.setLabel(label);
+        var polygon = new BMap.Polygon(points, { strokeColor:"#FFFFFF",fillColor:gradient[get_region_color(region_id)], strokeWeight:1, strokeOpacity:0.5});  // 初始化PointCollection
         map.addOverlay(polygon);
+{#        map.addOverlay(label);#}
     }
-    var gradient = new gradientColor('#013548','#554851',300);
-   alert(gradient);
-
 
 </script>
 {% endblock %}

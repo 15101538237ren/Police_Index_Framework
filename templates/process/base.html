@@ -31,32 +31,8 @@
         },time);
     }
 
-    function gradientColor(startColor,endColor,step){
-       startRGB = this.colorRgb(startColor);//转换为rgb数组模式
-       startR = startRGB[0];
-       startG = startRGB[1];
-       startB = startRGB[2];
-
-       endRGB = this.colorRgb(endColor);
-       endR = endRGB[0];
-       endG = endRGB[1];
-       endB = endRGB[2];
-
-       sR = (endR-startR)/step;//总差值
-       sG = (endG-startG)/step;
-       sB = (endB-startB)/step;
-
-       var colorArr = [];
-       for(var i=0;i<step;i++){
-		   //计算每一步的hex值
-           var hex = this.colorHex('rgb('+parseInt((sR*i+startR))+','+parseInt((sG*i+startG))+','+parseInt((sB*i+startB))+')');
-           colorArr.push(hex);
-       }
-       return colorArr;
-   }
-
-   // 将hex表示方式转换为rgb表示方式(这里返回rgb数组模式)
-   gradientColor.prototype.colorRgb = function(sColor){
+    // 将hex表示方式转换为rgb表示方式(这里返回rgb数组模式)
+    function colorRgb(sColor){
        var reg = /^#([0-9a-fA-f]{3}|[0-9a-fA-f]{6})$/;
        var sColor = sColor.toLowerCase();
        if(sColor && reg.test(sColor)){
@@ -77,13 +53,12 @@
            return sColor;
        }
    };
-
-   // 将rgb表示方式转换为hex表示方式
-   gradientColor.prototype.colorHex = function(rgb){
+    // 将rgb表示方式转换为hex表示方式
+    function colorHex(rgb){
        var _this = rgb;
        var reg = /^#([0-9a-fA-f]{3}|[0-9a-fA-f]{6})$/;
        if(/^(rgb|RGB)/.test(_this)){
-           var aColor = _this.replace(/(?:(|)|rgb|RGB)*/g,"").split(",");
+           var aColor = _this.replace(/(?:(|)|rgb|RGB|\(|\))*/g,"").split(",");
            var strHex = "#";
            for(var i=0; i<aColor.length; i++){
                var hex = Number(aColor[i]).toString(16);
@@ -112,6 +87,32 @@
            return _this;
        }
    }
+    function gradientColor(startColor,endColor,step){
+       startRGB = colorRgb(startColor);//转换为rgb数组模式
+       startR = startRGB[0];
+       startG = startRGB[1];
+       startB = startRGB[2];
+
+       endRGB = colorRgb(endColor);
+       endR = endRGB[0];
+       endG = endRGB[1];
+       endB = endRGB[2];
+
+       sR = (endR-startR)/step;//总差值
+       sG = (endG-startG)/step;
+       sB = (endB-startB)/step;
+
+       var colorArr = [];
+       for(var i=0;i<step;i++){
+		   //计算每一步的hex值
+           var hex = colorHex('rgb('+parseInt((sR*i+startR))+','+parseInt((sG*i+startG))+','+parseInt((sB*i+startB))+')');
+           colorArr.push(hex);
+       }
+       return colorArr;
+   }
+
+
+
     </script>
     {% block head %}{% endblock %}
 </head>

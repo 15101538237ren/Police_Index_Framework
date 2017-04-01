@@ -26,8 +26,8 @@ def unicode_csv_reader(gbk_data, dialect=csv.excel, **kwargs):
         yield [unicode(cell, 'gbk') for cell in row]
 
 #导入警力数据(输入文件xls的路径(不含中文),年,月,开始日期
-def import_police_data(input_file_path , year , month, date_start_day=1):
-    file = xlrd.open_workbook(input_file_path)
+def import_police_data(input_police_file_path , year , month, date_start_day=1):
+    file = xlrd.open_workbook(input_police_file_path)
     file_sheet = file.sheets()
 
     #日期记录编号
@@ -38,18 +38,17 @@ def import_police_data(input_file_path , year , month, date_start_day=1):
         for disstrict_name , i in district_row_no.items():
             for j in range(2, ncols):
                 if sheet.cell(i,j).value != '':
-                    pass
- #                   police = Police(region = pinyin_hash[disstrict_name],people_cnt=int(sheet.cell(i,j).value),create_time=datetime.datetime(year=year,month=month,day=day_num,hour=j-2,minute=0 ,second=0))
-  #                  police.save()
+                   police = Police(region = pinyin_hash[disstrict_name],group=0 , people_cnt=int(sheet.cell(i,j).value),create_time=datetime.datetime(year=year,month=month,day=day_num,hour=j-2,minute=0 ,second=0))
+                   police.save()
         day_num += 1
-    # print("import police data to database seccessfully!")
+    print("import police data to database seccessfully!")
 
 #导入拥堵延时指数数据
 #input_file_path: 输入文件xls的路径(不含中文)
-def import_crowd_data(input_file_path):
+def import_crowd_data(input_crowd_file_path):
     get_excel_index()
 
-    file = xlrd.open_workbook(input_file_path)
+    file = xlrd.open_workbook(input_crowd_file_path)
     file_sheets = file.sheets()
     for idx in range(1,len(file_sheets)):
 
@@ -77,11 +76,11 @@ def import_crowd_data(input_file_path):
                 BUSINESS_AREA_INDEX = 'B'
                 business_area = file_sheet.cell(i, excel_dict[BUSINESS_AREA_INDEX]).value
                 create_time = datetime.datetime.strptime(create_time_str, "%Y-%m-%d %H:%M:%S")
-                crowd_index = Crowd_Index(region=region,bussiness_area=business_area,avg_car_speed=avg_car_speed,crowd_index=crowd_index,create_time=create_time)
+                crowd_index = Crowd_Index(region=region,bussiness_area=business_area,avg_car_speed=avg_car_speed,crowd_index=crowd_index,create_time=create_time,group=0)
                 crowd_index.save()
             else:
                 create_time = datetime.datetime.strptime(create_time_str, "%Y-%m-%d %H:%M")
-                crowd_index = Crowd_Index(region=region,bussiness_area=None,avg_car_speed=avg_car_speed,crowd_index=crowd_index,create_time=create_time)
+                crowd_index = Crowd_Index(region=region,bussiness_area=None,avg_car_speed=avg_car_speed,crowd_index=crowd_index,create_time=create_time,group=0)
                 crowd_index.save()
     #print "import crowd data_successful"
 #导入违法数据
@@ -121,7 +120,7 @@ def import_violation_data(input_violation_file,path_pkl_path):
                         num += 1
                         region = pinyin_hash[roadset[j]["name"]]
                         create_time = datetime.datetime.strptime(create_time_str, "%Y-%m-%d %H:%M:%S")
-                        violation = Violation(breach_type=breach_type,region=region,longitude=lon,latitude=lat,create_time=create_time)
+                        violation = Violation(breach_type=breach_type,region=region,longitude=lon,latitude=lat,create_time=create_time,group=0)
                         violation.save()
                         break
     print("num="+str(num)+",nrows="+str(nrows))
@@ -150,7 +149,7 @@ def import_app_incidence_data(input_app_incidence_file):
         if region_text in region_hash2.keys():
             region = region_hash2[region_text]
             # output_str = str(longitude) + "," + str(latitude) + "," + place + "," + create_time_str + "," + str(region)
-            app_incidence = App_Incidence(longitude=longitude,latitude=latitude,place=place,create_time=create_time,region=region)
+            app_incidence = App_Incidence(longitude=longitude,latitude=latitude,place=place,create_time=create_time,region=region,group=0)
             app_incidence.save()
     print("load app incidence data successful!")
 
@@ -215,27 +214,29 @@ def import_call_incidence_data(input_call_incidence_file,path_pkl_path):
                         num += 1
                         region = pinyin_hash[roadset[j]["name"]]
                         # output_str = str(region) + "," + create_time_str + "," + str(longitude) + "," + str(latitude) + "," + event_content + "," + place
-                        call_incidence = Call_Incidence(region=region,create_time=create_time,longitude=longitude,latitude=latitude,event_content=event_content)
+                        call_incidence = Call_Incidence(region=region,create_time=create_time,longitude=longitude,latitude=latitude,event_content=event_content,group=0)
                         call_incidence.save()
                         break
     print("import call 122 finished!")
+if __name__ == "__main__":
 
-def preprocess_whole_122(input_dir,month_list):
-    for month in month_list:
-        input_file_path = input_dir + os.sep + str(month) + ".csv"
+    input_call_incidence_file = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2017/shuju/122_17-01.xls"
+    path_pkl_path = "/Users/Ren/PycharmProjects/Police_Index_Framework/data/boundary.pkl"
 
-        reader = unicode_csv_reader(open(input_file_path))
-        for i,row in enumerate(reader):
-            dadui_name = row[1]
-            if dadui_name in dadui_hash.keys():
-                district_no = str(region_hash[dadui_hash[dadui_name]])
-                date_time = datetime.datetime.strptime(row[0],"%Y/%m/%d %H:%M:%S")
-                date_time_str = date_time.strftime("%Y-%m-%d %H:%M:%S")
-        duration_minute = 10
-        tz=pytz.timezone('Asia/Shanghai')
-        year = 2016
-        from_date = datetime.datetime(year,month,1,0,0,0,0,tzinfo=tz)
-        firstDayWeekDay, monthRange = calendar.monthrange(year, month)
-        to_date = datetime.datetime(year,month,monthRange,23,59,59,0,tzinfo=tz)
-        preprocess_inmediate_file_to_standard(out_file_path,out_dir,from_date,to_date,duration_minute)
-        print "%d month write successfully!" % month
+    import_call_incidence_data(input_call_incidence_file=input_call_incidence_file,path_pkl_path=path_pkl_path)
+
+    input_app_incidence_file = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2017/shuju/app_incidence_2017_1_2.xls"
+
+    import_app_incidence_data(input_app_incidence_file=input_app_incidence_file)
+
+    input_violation_file = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2017/shuju/violation_2017_1_2.xlsx"
+
+    import_violation_data(input_violation_file=input_violation_file,path_pkl_path=path_pkl_path)
+
+    input_crowd_file_path = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2017/shuju/crowd_2017_1_2.xlsx"
+
+    import_crowd_data(input_crowd_file_path=input_crowd_file_path)
+
+    input_police_file_path = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2017/police/201702.xls"
+
+    import_police_data(input_police_file_path=input_police_file_path,year=2017,month=2,date_start_day=1)
