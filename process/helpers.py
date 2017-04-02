@@ -1,5 +1,5 @@
 # coding: utf-8
-import math,pickle,csv
+import math,pickle,csv,json
 from django.http import JsonResponse
 region_hash = {u"东城" : 1, u"西城": 2, u"朝阳": 5, u"海淀": 6,u"丰台":7,u"大兴":8,u"石景山":9}
 region_hash_anti = {1:u"东城", 2:u"西城", 5:u"朝阳", 6:u"海淀",7:u"丰台",8:u"大兴",9:u"石景山"}
@@ -34,10 +34,19 @@ def ajax_required(func):
 def success_response(**response_dict):
     response_dict["code"]=0
     return JsonResponse(response_dict)
+
+def get_json_template_from(file_path):
+    fp=open(file_path,"r")
+    json_str = json.loads(json.dumps(fp.read()))
+    json_obj = json.loads(json_str)
+    fp.close()
+    return json_obj
+
+
+
 # 检查一个点是否在道路的多边形区域内
 # 如果在多边形内，返回值为1
 # 如果在多边形外，而且离多边形很远，返回值为0
-
 def check_point(dataset, lng, lat):
     flag, minDis, x0, y0, count, length, j = 0, MAXINT, MAXINT, lat, 0, len(dataset), len(dataset) - 1
     for i in range(0, length):

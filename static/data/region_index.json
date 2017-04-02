@@ -1,0 +1,65 @@
+{
+    "dataZoom": [
+        {
+            "end": 85,
+            "realtime": true,
+            "show": true,
+            "start": 65
+        },
+        {
+            "end": 85,
+            "realtime": true,
+            "start": 65,
+            "type": "inside"
+        }
+    ],
+    "tooltip": {
+        "trigger": "axis",
+        "axisPointer": {
+            "animation": false
+        }
+    },
+    "toolbox": {
+        "show": true,
+        "feature": {
+            "dataView": {"readOnly": true},
+            "magicType": {"type": ["line", "bar"]},
+            "restore": {},
+            "saveAsImage": {}
+        }
+    },
+    "legend": {
+        "data": [],
+        "top": "6%",
+        "left":"center"
+    },
+    "series": [{
+            "name":"test",
+            "type":"line",
+            "animation": false,
+            "areaStyle": {
+                "normal": {}
+            },
+            "lineStyle": {
+                "normal": {
+                    "width": 1
+                }
+            },
+            "data":[]
+        }
+    ],
+    "title": {
+        "text": "Title",
+        "x": "center"
+    },
+    "xAxis": [
+        {
+            "boundaryGap": false,
+            "data": [],
+            "type": "category"
+        }
+    ],
+    "yAxis": {
+        "type": "value"
+    }
+}

@@ -5,14 +5,17 @@ from process.train import *
 from process.helpers import pinyin_hash,week_hash,ajax_required,success_response
 from import_data import *
 from helpers import region_hash_anti
-import datetime,calendar
+import datetime
+from os.path import normpath,join
+from Police_Index_Framework.settings import BASE_DIR
+from django.views.decorators.http import require_GET, require_POST
 # evecs_tmp = np.array()
+duration = 10
 def index(request):
     year = 2017
     month = 2
     is_region = 1
     week_agg = 0
-    duration = 10
 
     from_dt = datetime.datetime(year,month,1,0,0,0,0)
     if month !=12:
@@ -32,7 +35,7 @@ def query_status(request):
     datetime_query = request.GET.get("query_dt","2017-02-01 0:0:0")
     datetime_query = datetime.datetime.strptime(datetime_query, "%Y-%m-%d %H:%M:%S")
 
-    region_pca = OutputRegionIndex(datetime_query, duration=10)
+    region_pca = OutputRegionIndex(datetime_query, duration=duration)
     region_labels = {}
     for k,v in region_pca.iteritems():
         region_name = region_hash_anti[int(k)]
@@ -46,7 +49,6 @@ def train_region(request):
     if request.method == 'GET':
         is_region = {u"所有区混合训练":0,u"区域分别训练":1}
         week_agg = week_hash
-        ab=1
         return render_to_response('process/train.html', locals(), context_instance=RequestContext(request))
     else:
         is_region = int(request.GET.get("train_region",0))
@@ -57,41 +59,27 @@ def train_region(request):
         end_date = request.GET.get("date_end","2017-02-28")
         start_dt = datetime.datetime.strptime(from_date+" "+start_time, "%Y-%m-%d %H:%M:%S")
         end_dt  = datetime.datetime.strptime(end_date+" "+end_time, "%Y-%m-%d %H:%M:%S")
-        duration = 10
         trainRegion(start_time = start_dt, end_time = end_dt, is_region = is_region, is_week= week_agg, duration=duration)
         ret_dict={}
         return success_response(**ret_dict)
-
-def test_region_now(request):
-
-    if request.method == 'POST':
-        region = int(request.POST.get("train_region",0))
-        week_agg = int(request.POST.get("week_agg",0))
-        from_date = request.POST.get("date_start","2017-02-01")
-        start_time = "0:0:0"
-        end_time = "23:59:59"
-        end_date = request.POST.get("date_end","2017-02-28")
-        start_dt = datetime.datetime.strptime(from_date+" "+start_time, "%Y-%m-%d %H:%M:%S")
-        end_dt  = datetime.datetime.strptime(end_date+" "+end_time, "%Y-%m-%d %H:%M:%S")
-        duration = 10
-        pca_no = 0
-        evecs = train(start_dt, end_dt, region=region, is_week=week_agg, duration=duration)
-        test_region(evecs,pca_no,start_dt, end_dt, region = region, is_week=week_agg, duration=duration)
-        return render_to_response('process/pca_rst.html', locals(), context_instance=RequestContext(request))
-def index2(request):
-    input_file_path = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2017/shuju/122_17-02.xls"
-    path_pkl_path = "/Users/Ren/PycharmProjects/PoliceIndex/boundary.pkl"
-    # import_app_incidence_data(input_file_path)
-    #import_call_incidence_data(input_file_path,path_pkl_path)
-    from_time = datetime.datetime(2017,2,1,0,0,0,0)
-    to_time = datetime.datetime(2017,2,28,23,59,59,0)
-    is_week = 1
-    duration = 10
-    pca_no = 0
-    train_region = 0
-    test_region_no = pinyin_hash["chaoyang"]
-    # time_list = generate_str_arr_from_date_to_date(from_time,to_time,10)
-    evecs = train(from_time, to_time, region=train_region, is_week=is_week, duration=duration)
-    test_region(evecs,pca_no,from_time, to_time, region = test_region_no, is_week=is_week, duration=duration)
-    # print evecs[:,0]
-    return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
+@require_GET
+def region_statistics(request):
+        region = region_hash
+        print BASE_DIR
+        return render_to_response('process/statistics.html', locals(), context_instance=RequestContext(request))
+@require_GET
+@ajax_required
+def load_region_statistics(request):
+    region_id = int(request.GET.get("query_region",1))
+    from_date = request.GET.get("date_start","2017-02-01")
+    start_time = "0:0:0"
+    end_time = "23:59:59"
+    end_date = request.GET.get("date_end","2017-02-28")
+    start_dt = datetime.datetime.strptime(from_date+" "+start_time, "%Y-%m-%d %H:%M:%S")
+    end_dt  = datetime.datetime.strptime(end_date+" "+end_time, "%Y-%m-%d %H:%M:%S")
+    dt_list = generate_str_arr_from_date_to_date(start_dt,end_dt,duration_minute=duration)
+    json_load_file = normpath(join(BASE_DIR,  'static', 'data', 'region_index.json'))
+    json_temp_wrt_file = normpath(join(BASE_DIR,  'static', 'data', 'temp_index.json'))
+    get_region_index_to_json(json_load_file=json_load_file,tmp_wrt_file=json_temp_wrt_file,datetime_list=dt_list,region_id=region_id,duration=duration)
+    response_addr = {'addr':'/static/data/temp_index.json'}
+    return success_response(**response_addr)

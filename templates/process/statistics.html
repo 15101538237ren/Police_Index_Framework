@@ -1,10 +1,12 @@
 {% extends "process/base.html" %}
 {% load static from staticfiles %}
-{% block title %}训练页面{% endblock %}
+{% block title %}统计结果页面{% endblock %}
 {% block head %}
     <link rel="stylesheet" type="text/css" media="screen" href="{% static "css/jquery-confirm.min.css" %}" />
     <script type="text/javascript" src="{% static "js/jquery-confirm.min.js" %}" charset="UTF-8"></script>
+    <script type="text/javascript" src="{% static "js/echarts3.js" %}"></script>
     <script type="text/javascript">
+    var myChart;
     function flash(text,time)
     {
         $("#loading_text").html(text);
@@ -13,9 +15,10 @@
             $("#loading_div2").css('display','none');
         },time);
     }
+
     function submit_form()
     {
-        flash("正在训练,请您耐心等待!", 30000);
+        flash("正在查询,请稍等!", 60000);
         $.ajaxSetup({
             dataType: "json",
             beforeSend: function (xhr, settings) {
@@ -23,30 +26,24 @@
             },
         });
         var train_region = $("#region_select").find("option:selected").val();
-        var week_agg = $("#week_select").find("option:selected").val();
         var date_start = $("#date_start").val();
         var date_end = $("#date_end").val();
         $.ajax({
-            type: "POST",
-            url: "{% url 'process:train_region' %}?train_region="+train_region+"&week_agg="+week_agg+"&date_start="+date_start+"&date_end="+date_end,
+            type: "GET",
+            url: "{% url 'process:load_region_statistics' %}?query_region="+train_region+"&date_start="+date_start+"&date_end="+date_end,
             success: function (result) {
                 if (result["code"] == 0) {
-                    var jc = $.confirm({
-                        confirmButtonClass: 'btn-success',
-                        cancelButtonClass: 'btn-danger',
-
-                        keyboardEnabled: true,
-                        title: '信息',
-                        content: '训练完成,是否跳转到测试页?',
-                        confirmButton:'是',
-                        cancelButton:'否',
-                        closeIcon:true,
-                        confirm: function(){
-                            jc.close();
-                            $("#loading_div2").css('display','none');
-                            location.href="{% url 'process:index' %}";
-                        }
-                    });
+                    $("#loading_div2").css('display','none');
+                    var addr=result["addr"];
+                    if(typeof addr != "object"){
+                        $.get(addr).done(function (rtn_json) {
+                            myChart.setOption(rtn_json);
+                        });
+                    }
+                    else
+                    {
+                        return "返回的数据格式不对!";
+                    }
             }
             else {
                 alert(result.message);
@@ -69,32 +66,17 @@
 <div class="container">
   <div class="row">
     <div id="toolbar">
-           <br/>
-            <br/>
            <div class="form-inline" role="form">
             <form id = "train_form" class="form-inline"  action="" method="POST">
                <div class="form-group">
-                    <label for="train_region" class="control-label"><small>训练方式:</small></label>
-                    <select id="region_select" class="form-control input-sm" name="train_region" style="width:140px;">
-                          {% for k,v in is_region.items %}
+                    <label for="query_region" class="control-label"><small>查询区域:</small></label>
+                    <select id="region_select" class="form-control input-sm" name="query_region" style="width:80px;">
+                          {% for k,v in region.items %}
                               {% ifequal forloop.counter0 0 %}
                                   <option value="{{ v }}" selected="selected">{{ k }}</option>
                               {% else %}
                                    <option value="{{ v }}">{{ k }}</option>
                               {% endifequal %}
-                          {% endfor %}
-                    </select>
-               </div>&nbsp;
-               <div class="form-group">
-                    <label for="week_agg" class="control-label"><small>星期聚合:</small></label>
-                    <select id="week_select" class="form-control input-sm" name="week_agg" style="width:100px;">
-                          {% for k,v in week_agg.items %}
-                              {% ifequal forloop.counter0 0 %}
-                                  <option value="{{ v }}" selected="selected">{{ k }}</option>
-                              {% else %}
-                                   <option value="{{ v }}">{{ k }}</option>
-                              {% endifequal %}
-
                           {% endfor %}
                     </select>
                </div>&nbsp;
@@ -104,12 +86,13 @@
                     <input id = "date_end"  class="form-control form-date input-sm"  type="text" name="date_end" style="width: 120px;"  data-date-format="yyyy-mm-dd" value="2017-02-28" >
                </div>&nbsp;
             <div class="form-group">
-                <input onclick="submit_form()" class="btn btn-primary btn-sm"  style="width: 80px;" value="训练"/>
+                <input onclick="submit_form()" class="btn btn-primary btn-sm" style="width: 60px;" value="查询"/>
                 {% csrf_token %}
             </div>&nbsp;
                 </form>
            </div>
     </div>
+    <div id="echart_body" style="width: 1200px;height:800px;"></div>
   </div>
 </div>
 {% endblock %}
@@ -125,5 +108,6 @@
           minView:2,
           forceParse:0
         });
+        myChart = echarts.init(document.getElementById('echart_body'));
     </script>
 {% endblock %}
