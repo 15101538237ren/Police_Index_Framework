@@ -42,34 +42,25 @@ def query_status(request):
     for k,v in region_labels.iteritems():
         region_pca['r_'+k] = v
     return success_response(**region_pca)
-def a(request):
+def train_region(request):
     if request.method == 'GET':
-        regions = region_hash
+        is_region = {u"所有区混合训练":0,u"区域分别训练":1}
         week_agg = week_hash
         ab=1
-        return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
+        return render_to_response('process/train.html', locals(), context_instance=RequestContext(request))
     else:
-        region = int(request.POST.get("train_region",0))
-        week_agg = int(request.POST.get("week_agg",0))
-        from_date = request.POST.get("date_start","2017-02-01")
+        is_region = int(request.GET.get("train_region",0))
+        week_agg = int(request.GET.get("week_agg",0))
+        from_date = request.GET.get("date_start","2017-02-01")
         start_time = "0:0:0"
         end_time = "23:59:59"
-        end_date = request.POST.get("date_end","2017-02-28")
+        end_date = request.GET.get("date_end","2017-02-28")
         start_dt = datetime.datetime.strptime(from_date+" "+start_time, "%Y-%m-%d %H:%M:%S")
         end_dt  = datetime.datetime.strptime(end_date+" "+end_time, "%Y-%m-%d %H:%M:%S")
         duration = 10
-        pca_no = 2
-        evecs = train(start_dt, end_dt, region=region, is_week=week_agg, duration=duration)
-        if all( evecs[:,0] < np.zeros(len(evecs[:,0]))):
-            evecs = evecs * -1
-        app_incidence = evecs[0,0]
-        violation = evecs[1,0]
-        call_incidence =  evecs[2,0]
-        crowd_index = evecs[3,0]
-        evecs_tmp = evecs
-        regions = region_hash
-        week_agg = week_hash
-        return render_to_response('process/pca_rst.html', locals(), context_instance=RequestContext(request))
+        trainRegion(start_time = start_dt, end_time = end_dt, is_region = is_region, is_week= week_agg, duration=duration)
+        ret_dict={}
+        return success_response(**ret_dict)
 
 def test_region_now(request):
 

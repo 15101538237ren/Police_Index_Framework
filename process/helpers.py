@@ -4,6 +4,7 @@ from django.http import JsonResponse
 region_hash = {u"东城" : 1, u"西城": 2, u"朝阳": 5, u"海淀": 6,u"丰台":7,u"大兴":8,u"石景山":9}
 region_hash_anti = {1:u"东城", 2:u"西城", 5:u"朝阳", 6:u"海淀",7:u"丰台",8:u"大兴",9:u"石景山"}
 region_hash2 = {u"东城区" : 1, u"西城区": 2, u"朝阳区": 5, u"海淀区": 6,u"丰台区":7,u"大兴区":8,u"石景山区":9}
+
 week_hash = {u"无":0,u"星期聚合":1}
 pinyin_hash = {"dongcheng" : 1, "xicheng" : 2, "chaoyang":5, "haidian":6,"fengtai":7,"daxing":8,"shijingshan":9}
 MAXINT = 999999999

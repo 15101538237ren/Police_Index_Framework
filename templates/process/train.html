@@ -13,6 +13,55 @@
             $("#loading_div2").css('display','none');
         },time);
     }
+    function submit_form()
+    {
+        flash("正在训练,请您耐心等待!", 30000);
+        $.ajaxSetup({
+            dataType: "json",
+            beforeSend: function (xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", '{{ csrf_token }}');
+            },
+        });
+        var train_region = $("#region_select").find("option:selected").val();
+        var week_agg = $("#week_select").find("option:selected").val();
+        var date_start = $("#date_start").val();
+        var date_end = $("#date_end").val();
+        $.ajax({
+            type: "POST",
+            url: "{% url 'process:train_region' %}?train_region="+train_region+"&week_agg="+week_agg+"&date_start="+date_start+"&date_end="+date_end,
+            success: function (result) {
+                if (result["code"] == 0) {
+                    var jc = $.confirm({
+                        confirmButtonClass: 'btn-success',
+                        cancelButtonClass: 'btn-danger',
+
+                        keyboardEnabled: true,
+                        title: '信息',
+                        content: '训练完成,是否跳转到测试页?',
+                        confirmButton:'是',
+                        cancelButton:'否',
+                        closeIcon:true,
+                        confirm: function(){
+                            jc.close();
+                            $("#loading_div2").css('display','none');
+                            location.href="{% url 'process:index' %}";
+                        }
+                    });
+            }
+            else {
+                alert(result.message);
+            }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.table([{
+                    "错误类型": jqXHR,
+                    "错误信息": textStatus,
+                    "http状态": errorThrown
+                }])
+            }
+        });
+
+    }
     </script>
 {% endblock %}
 
@@ -21,19 +70,22 @@
   <div class="row">
     <div id="toolbar">
            <div class="form-inline" role="form">
-            <form class="form-inline"  action="{% url 'process:train' %}" method="POST">
+            <form id = "train_form" class="form-inline"  action="" method="POST">
                <div class="form-group">
-                    <label for="train_region" class="control-label"><small>训练区域:</small></label>
-                    <select id="region_select" class="form-control input-sm" name="train_region" style="width:60px;">
-                        <option value="0" selected="selected">全部</option>
-                          {% for k,v in regions.items %}
-                            <option value="{{ v }}">{{ k }}</option>
+                    <label for="train_region" class="control-label"><small>训练方式:</small></label>
+                    <select id="region_select" class="form-control input-sm" name="train_region" style="width:140px;">
+                          {% for k,v in is_region.items %}
+                              {% ifequal forloop.counter0 0 %}
+                                  <option value="{{ v }}" selected="selected">{{ k }}</option>
+                              {% else %}
+                                   <option value="{{ v }}">{{ k }}</option>
+                              {% endifequal %}
                           {% endfor %}
                     </select>
                </div>&nbsp;
                <div class="form-group">
                     <label for="week_agg" class="control-label"><small>星期聚合:</small></label>
-                    <select id="region_select" class="form-control input-sm" name="week_agg" style="width:60px;">
+                    <select id="week_select" class="form-control input-sm" name="week_agg" style="width:100px;">
                           {% for k,v in week_agg.items %}
                               {% ifequal forloop.counter0 0 %}
                                   <option value="{{ v }}" selected="selected">{{ k }}</option>
@@ -46,11 +98,11 @@
                </div>&nbsp;
                <div class="form-group">
                     <label for="date_start" ><small>时间:</small></label>
-                    <input class="form-control form-date input-sm" type="text" name="date_start" style="width: 80px;" data-date-format="yyyy-mm-dd" value="2017-02-01" >—
-                    <input class="form-control form-date input-sm"  type="text" name="date_end" style="width: 80px;"  data-date-format="yyyy-mm-dd" value="2017-02-28" >
+                    <input id = "date_start" class="form-control form-date input-sm" type="text" name="date_start" style="width: 120px;" data-date-format="yyyy-mm-dd" value="2017-02-01" >—
+                    <input id = "date_end"  class="form-control form-date input-sm"  type="text" name="date_end" style="width: 120px;"  data-date-format="yyyy-mm-dd" value="2017-02-28" >
                </div>&nbsp;
             <div class="form-group">
-                <input type="submit" class="btn btn-default btn-sm" value="训练"/>
+                <input onclick="submit_form()" class="btn btn-primary btn-sm" value="训练"/>
                 {% csrf_token %}
             </div>&nbsp;
                 </form>
