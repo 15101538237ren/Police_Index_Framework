@@ -32,7 +32,6 @@
         }
         function query_datetime()
         {
-{#            var dt_now = $("#ui-slider-value").text();#}
             var dt_now = $("#datetimepicker").val();
             $.ajaxSetup({
                 dataType: "json",
@@ -71,13 +70,13 @@
 {% endblock %}
 {% block content %}
     <div class="container">
-{#        <div id="slider3">#}
-{#        </div>#}
+
         <div class="form-inline" role="form">
         <div class="form-group">
             <label for="dt_query" >时间:</label>
             <input type="text" class="form-control form-date input-sm" value="2017-02-1 1:00:00" style="width: 180px;"  id="datetimepicker" data-date-format="yyyy-mm-dd hh:ii:ss">
-            <button class="btn btn-primary" onclick="query_datetime()">查询 <span id="ui-slider-value"></span> </button>
+            <button class="btn btn-primary" onclick="query_datetime()">查询</button>
+            <div id="slider3"></div>
         </div>&nbsp;
         </div>
     </div>
@@ -135,21 +134,11 @@
         orientation: "horizontal",
         range: "min",
         slide: function(event, ui) {
-          $("#ui-slider-value")
-            .text(get_dt(ui.value));
+          $("#datetimepicker")
+            .val(get_dt(ui.value));
         }
       });
     }
-    $.fn.datetimepicker.dates['zh-CN'] = {
-			days: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"],
-			daysShort: ["周日", "周一", "周二", "周三", "周四", "周五", "周六", "周日"],
-			daysMin:  ["日", "一", "二", "三", "四", "五", "六", "日"],
-			months: ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"],
-			monthsShort: ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"],
-			today: "今天",
-			suffix: [],
-			meridiem: ["上午", "下午"]
-	};
     $('#datetimepicker').datetimepicker({
         language:'zh-CN',
         autoclose:1,
