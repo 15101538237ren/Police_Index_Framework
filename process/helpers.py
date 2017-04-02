@@ -1,5 +1,6 @@
 # coding: utf-8
 import math,pickle,csv
+from django.http import JsonResponse
 region_hash = {u"东城" : 1, u"西城": 2, u"朝阳": 5, u"海淀": 6,u"丰台":7,u"大兴":8,u"石景山":9}
 region_hash_anti = {1:u"东城", 2:u"西城", 5:u"朝阳", 6:u"海淀",7:u"丰台",8:u"大兴",9:u"石景山"}
 region_hash2 = {u"东城区" : 1, u"西城区": 2, u"朝阳区": 5, u"海淀区": 6,u"丰台区":7,u"大兴区":8,u"石景山区":9}
@@ -9,11 +10,29 @@ MAXINT = 999999999
 LNG_INDEX = 0
 LAT_INDEX = 1
 EPS = 0.000001
-#检查一个点是否在道路的多边形区域内
-#如果在多边形内，返回值为1
-#如果在多边形外，而且离多边形很远，返回值为0
 
+error_mapping = {
+    "LOGIN_NEEDED": (1, "login needed"),
+    "PERMISSION_DENIED": (2, "permission denied"),
+    "DATABASE_ERROR": (3, "operate database error"),
+    "ONLY_FOR_AJAX": (4, "the url is only for ajax request")
+}
 
+class ApiError(Exception):
+    def __init__(self, key, **kwargs):
+        Exception.__init__(self)
+        self.key = key if key in error_mapping else "UNKNOWN"
+        self.kwargs = kwargs
+def ajax_required(func):
+    def __decorator(request, *args, **kwargs):
+        if request.is_ajax:
+            return func(request, *args, **kwargs)
+        else:
+            raise ApiError("ONLY_FOR_AJAX")
+    return __decorator
+def success_response(**response_dict):
+    response_dict["code"]=0
+    return JsonResponse(response_dict)
 # 检查一个点是否在道路的多边形区域内
 # 如果在多边形内，返回值为1
 # 如果在多边形外，而且离多边形很远，返回值为0

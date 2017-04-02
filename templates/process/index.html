@@ -5,29 +5,80 @@
 <script type="text/javascript" src="{% static "js/data.js" %}"></script>
     <script>
         var gradient = new gradientColor('#00FF00','#FF0000',300);
-        var region_colors = new Array();
-        {% for k,v in region_pca.items %}
-            region_colors["{{ k }}"] = {{ v }};
+
+        var district_ids = new Array();
+        {% for district_id in district_ids %}
+            district_ids.push({{ district_id }});
         {% endfor %}
+
+        var region_colors = new Array();
         function get_region_color(region_id)
         {
             return region_colors[region_id];
         }
         var region_labels = new Array();
-        {% for k,v in region_labels.items %}
-            region_labels["{{ k }}"] = "{{ v }}";
-        {% endfor %}
         function get_region_label(region_id)
         {
             return region_labels[region_id];
         }
+        var dt_list = new Array();
+        {% for dt in dt_list %}
+            dt_list.push("{{ dt }}");
+        {% endfor %}
 
+        function get_dt(idx)
+        {
+            return dt_list[idx];
+        }
+        function query_datetime()
+        {
+{#            var dt_now = $("#ui-slider-value").text();#}
+            var dt_now = $("#datetimepicker").val();
+            $.ajaxSetup({
+                dataType: "json",
+                beforeSend: function (xhr, settings) {
+                    xhr.setRequestHeader("X-CSRFToken", '{{ csrf_token }}');
+                },
+            });
+
+            $.ajax({
+                type: "POST",
+                url: "{% url 'process:query_status' %}?query_dt="+dt_now,
+                success: function (result) {
+                    if (result["code"] == 0) {
+                        for(i=0;i<district_ids.length;i++)
+                        {
+                            var district_id = district_ids[i];
+                            region_labels[district_id] = result["r_"+district_id];
+                            region_colors[district_id] = result[district_id];
+                        }
+                        redraw_polygons();
+                }
+                else {
+                    alert(result.message);
+                }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.table([{
+                        "错误类型": jqXHR,
+                        "错误信息": textStatus,
+                        "http状态": errorThrown
+                    }])
+                }
+            });
+        }
     </script>
 {% endblock %}
 {% block content %}
     <div class="container">
-        <div class="row">
-
+{#        <div id="slider3">#}
+{#        </div>#}
+        <div class="form-inline" role="form">
+        <div class="form-group">
+            <label for="dt_query" >时间:</label>
+            <input type="text" class="form-control form-date input-sm" value="2017-02-1 1:00:00" style="width: 180px;"  id="datetimepicker" data-date-format="yyyy-mm-dd hh:ii:ss">
+            <button class="btn btn-primary" onclick="query_datetime()">查询 <span id="ui-slider-value"></span> </button>
+        </div>&nbsp;
         </div>
     </div>
 	<div id="allmap">
@@ -36,6 +87,7 @@
 {% endblock %}
 {% block endscript %}
 <script type="text/javascript">
+
 	// 百度地图API功能
 	var map = new BMap.Map("allmap");
 	map.centerAndZoom(new BMap.Point(116.404, 39.915), 12);     // 初始化地图,设置中心点坐标和地图级别
@@ -46,7 +98,12 @@
     map.addControl(top_left_navigation);
     map.enableKeyboard();
 
-    for ( var region_id in data ){
+
+    function redraw_polygons()
+    {
+        map.clearOverlays();
+
+        for ( var region_id in data ){
         var points = [];  // 添加海量点数据
 
         for (var i = 0; i < data[region_id].length; i++) {
@@ -55,6 +112,7 @@
         var geo_center_point = new BMap.Point(geocenter[region_id][0],geocenter[region_id][1]);
         var marker = new BMap.Marker(geo_center_point);  // 创建标注
 	    map.addOverlay(marker);              // 将标注添加到地图中
+
         var label = new BMap.Label(get_region_label(region_id),{position :geo_center_point,offset   : new BMap.Size(20, -10)});
         label.setStyle({
 			 color : "white",
@@ -65,8 +123,36 @@
         marker.setLabel(label);
         var polygon = new BMap.Polygon(points, { strokeColor:"#FFFFFF",fillColor:gradient[get_region_color(region_id)], strokeWeight:1, strokeOpacity:0.5});  // 初始化PointCollection
         map.addOverlay(polygon);
-{#        map.addOverlay(label);#}
     }
+    }
+    var $slider3 = $("#slider3");
 
+    if ($slider3.length > 0) {
+      $slider3.slider({
+        min: 0,
+        max: {{ slider_cnts }},
+        values: 0,
+        orientation: "horizontal",
+        range: "min",
+        slide: function(event, ui) {
+          $("#ui-slider-value")
+            .text(get_dt(ui.value));
+        }
+      });
+    }
+    $.fn.datetimepicker.dates['zh-CN'] = {
+			days: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"],
+			daysShort: ["周日", "周一", "周二", "周三", "周四", "周五", "周六", "周日"],
+			daysMin:  ["日", "一", "二", "三", "四", "五", "六", "日"],
+			months: ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"],
+			monthsShort: ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"],
+			today: "今天",
+			suffix: [],
+			meridiem: ["上午", "下午"]
+	};
+    $('#datetimepicker').datetimepicker({
+        language:'zh-CN',
+        autoclose:1,
+        minuteStep:10});
 </script>
 {% endblock %}

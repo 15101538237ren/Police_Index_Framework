@@ -593,7 +593,7 @@ def OutputRegionIndex(query_time, duration=10):
         transformed_arr = np.matrix(np.transpose(normed_data_array)) * np.transpose(np.matrix(evecs_arr.real))
         PCA_x = transformed_arr[0, 0]  #取第一个主成分的值
         #print(PCA_x)
-        region_pca[region_id] = int(round(Index_range * PCA_x,2)*100)
+        region_pca[str(region_id)] = int(round(Index_range * PCA_x,2)*100)
     print(region_pca)
     return region_pca
 
