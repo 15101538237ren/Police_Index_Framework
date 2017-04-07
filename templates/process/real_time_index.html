@@ -1,11 +1,42 @@
 {% extends "process/base.html" %}
 {% load static from staticfiles %}
-{% block title %}主页{% endblock %}
+{% block title %}实时主页{% endblock %}
 {% block head %}
 <script type="text/javascript" src="{% static "js/data.js" %}"></script>
+<link rel="stylesheet" type="text/css" media="screen" href="{% static "css/jquery.KeleyiLCDClock.css" %}" />
+<script type="text/javascript" src="{% static "js/jquery.KeleyiLCDClock.js" %}"></script>
     <script>
 
+        function format_time(date_obj,fmt)
+        { //author: meizz
+          var o = {
+            "M+" : date_obj.getMonth()+1,                 //月份
+            "d+" : date_obj.getDate(),                    //日
+            "h+" : date_obj.getHours(),                   //小时
+            "m+" : date_obj.getMinutes(),                 //分
+            "s+" : date_obj.getSeconds(),                 //秒
+            "q+" : Math.floor((date_obj.getMonth()+3)/3), //季度
+            "S"  : date_obj.getMilliseconds()             //毫秒
+          };
+          if(/(y+)/.test(fmt))
+            fmt=fmt.replace(RegExp.$1, (date_obj.getFullYear()+"").substr(4 - RegExp.$1.length));
+          for(var k in o)
+            if(new RegExp("("+ k +")").test(fmt))
+          fmt = fmt.replace(RegExp.$1, (RegExp.$1.length==1) ? (o[k]) : (("00"+ o[k]).substr((""+ o[k]).length)));
+          return fmt;
+        }
+
         var gradient = new gradientColor('#00FF00','#FF0000',300);
+
+        var dt_now_arr = "{{ query_time }}";
+        dt_now_arr = dt_now_arr.split(":");
+        var dt_obj = new Date(parseInt(dt_now_arr[0]),parseInt(dt_now_arr[1])-1,parseInt(dt_now_arr[2]),parseInt(dt_now_arr[3]),parseInt(dt_now_arr[4]),parseInt(dt_now_arr[5]));
+        dt_obj.getTime();
+        function update_time()
+        {
+            dt_obj.setTime(dt_obj.getTime()+1000);
+        }
+        setInterval(update_time,1000);
 
         var district_ids = new Array();
         {% for district_id in district_ids %}
@@ -33,7 +64,8 @@
         }
         function query_datetime()
         {
-            var dt_now = $("#datetimepicker").val();
+            flash("正在更新状态,请稍等!", 10000);
+            var dt_now = format_time(dt_obj,"yyyy-MM-dd hh:mm:ss");
             $.ajaxSetup({
                 dataType: "json",
                 beforeSend: function (xhr, settings) {
@@ -43,7 +75,7 @@
 
             $.ajax({
                 type: "POST",
-                url: "{% url 'process:query_status' %}?query_dt="+dt_now,
+                url: "{% url 'process:query_status' %}?realtime=1&query_dt="+dt_now,
                 success: function (result) {
                     if (result["code"] == 0) {
                         for(i=0;i<district_ids.length;i++)
@@ -53,6 +85,7 @@
                             region_colors[district_id] = result[district_id];
                         }
                         redraw_polygons();
+                        $("#loading_div2").css('display','none');
                 }
                 else {
                     alert(result.message);
@@ -70,17 +103,8 @@
     </script>
 {% endblock %}
 {% block content %}
-    <div class="container">
+    <div id="keleyitime1" style="margin-bottom:10px">2017/2/3 {{ now_time }}</div>
 
-        <div class="form-inline" role="form">
-        <div class="form-group">
-            <label for="dt_query" >时间:</label>
-            <input type="text" class="form-control form-date input-sm" value="2017-02-1 1:00:00" style="width: 180px;"  id="datetimepicker" data-date-format="yyyy-mm-dd hh:ii:ss">
-            <button class="btn btn-primary" onclick="query_datetime()">查询</button>
-            <div id="slider3"></div>
-        </div>&nbsp;
-        </div>
-    </div>
 	<div id="allmap">
 
     </div>
@@ -97,7 +121,6 @@
     map.addControl(top_left_control);
     map.addControl(top_left_navigation);
     map.enableKeyboard();
-
 
     function redraw_polygons()
     {
@@ -144,5 +167,9 @@
         language:'zh-CN',
         autoclose:1,
         minuteStep:10});
+    $("#keleyitime1").KeleyiLCDClock();
+    $(function(){
+        setInterval(query_datetime,5000);
+    });
 </script>
 {% endblock %}

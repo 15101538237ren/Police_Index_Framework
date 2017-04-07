@@ -30,11 +30,40 @@ def index(request):
     query_time = datetime.datetime.strptime("2017-02-10 11:30:00", "%Y-%m-%d %H:%M:%S")
     district_ids = pinyin_hash.values()
     return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
+def realtime_index(request):
+
+    now_time_dt = datetime.datetime.now()
+    now_time = now_time_dt.strftime("%H:%M:%S")
+    year = 2017
+    month = 2
+    is_region = 1
+    week_agg = 0
+
+    from_dt = datetime.datetime(year,month,1,0,0,0,0)
+    if month !=12:
+        end_dt = datetime.datetime(year,month+1,1,0,0,0,0)
+    else:
+        end_dt = datetime.datetime(year+1,1,1,0,0,0,0)
+
+    dt_list = generate_str_arr_from_date_to_date(from_dt,end_dt,duration_minute=duration)
+    slider_cnts = len(dt_list)
+
+    # trainRegion(start_time = start_dt, end_time = end_dt, is_region = is_region, is_week= week_agg, duration=10)
+    query_time = "2017:2:3:" + now_time
+
+    district_ids = pinyin_hash.values()
+    return render_to_response('process/real_time_index.html', locals(), context_instance=RequestContext(request))
 @ajax_required
 def query_status(request):
+    real_time = int(request.GET.get("realtime",'0'))
     datetime_query = request.GET.get("query_dt","2017-02-01 0:0:0")
-    datetime_query = datetime.datetime.strptime(datetime_query, "%Y-%m-%d %H:%M:%S")
+    dt_format="%Y-%m-%d %H:%M:%S"
+    datetime_query = datetime.datetime.strptime(datetime_query,dt_format)
 
+    if real_time:
+        ct_time_str = format_time(datetime_query, dt_format)
+        print ct_time_str
+        datetime_query = datetime.datetime.strptime(ct_time_str, dt_format)
     region_pca = OutputRegionIndex(datetime_query, duration=duration)
     region_labels = {}
     for k,v in region_pca.iteritems():
