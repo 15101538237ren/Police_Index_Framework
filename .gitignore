@@ -6,5 +6,5 @@ shuju/
 .idea/
 geocoding_v1/
 Police_Index_Framework/settings.py
-process/migrations/
+process/migrations/*
 temp-plot.html
