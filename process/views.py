@@ -73,12 +73,12 @@ def query_status(request):
 
     if real_time:
         ct_time_str = format_time(datetime_query, dt_format)
-        print ct_time_str
+        print(ct_time_str)
         datetime_query = datetime.datetime.strptime(ct_time_str, dt_format)
     qt = datetime.datetime(datetime_query.year,datetime_query.month,datetime_query.day,datetime_query.hour,0,0,0)
     region_pca = OutputRegionIndex(datetime_query, duration=duration)
     region_labels = {}
-    for k,v in region_pca.iteritems():
+    for k,v in region_pca.items():
         police_real = Police.objects.filter(create_time=qt,region=int(k))
         # if len(police_real)==0:
         #     police_real_cnt = -1
@@ -90,7 +90,7 @@ def query_status(request):
         people_recommend = int((region_index/300.0)*police_max)
         label = region_name + u":" + str(region_index/100.0) +u"<br/> 实际警力:"+str(police_real_cnt)+u"<br/>建议警力:"+str(people_recommend)
         region_labels[k]= label
-    for k,v in region_labels.iteritems():
+    for k,v in region_labels.items():
         region_pca['r_'+k] = v
     return success_response(**region_pca)
 def train_region(request):
@@ -113,7 +113,7 @@ def train_region(request):
 @require_GET
 def region_statistics(request):
         region = region_hash
-        print BASE_DIR
+        print(BASE_DIR)
         return render_to_response('process/statistics.html', locals(), context_instance=RequestContext(request))
 @require_GET
 @ajax_required
