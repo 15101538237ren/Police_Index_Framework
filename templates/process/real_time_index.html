@@ -1,0 +1,175 @@
+{% extends "process/base.html" %}
+{% load static from staticfiles %}
+{% block title %}实时主页{% endblock %}
+{% block head %}
+<script type="text/javascript" src="{% static "js/data.js" %}"></script>
+<link rel="stylesheet" type="text/css" media="screen" href="{% static "css/jquery.KeleyiLCDClock.css" %}" />
+<script type="text/javascript" src="{% static "js/jquery.KeleyiLCDClock.js" %}"></script>
+    <script>
+
+        function format_time(date_obj,fmt)
+        { //author: meizz
+          var o = {
+            "M+" : date_obj.getMonth()+1,                 //月份
+            "d+" : date_obj.getDate(),                    //日
+            "h+" : date_obj.getHours(),                   //小时
+            "m+" : date_obj.getMinutes(),                 //分
+            "s+" : date_obj.getSeconds(),                 //秒
+            "q+" : Math.floor((date_obj.getMonth()+3)/3), //季度
+            "S"  : date_obj.getMilliseconds()             //毫秒
+          };
+          if(/(y+)/.test(fmt))
+            fmt=fmt.replace(RegExp.$1, (date_obj.getFullYear()+"").substr(4 - RegExp.$1.length));
+          for(var k in o)
+            if(new RegExp("("+ k +")").test(fmt))
+          fmt = fmt.replace(RegExp.$1, (RegExp.$1.length==1) ? (o[k]) : (("00"+ o[k]).substr((""+ o[k]).length)));
+          return fmt;
+        }
+
+        var gradient = new gradientColor('#00FF00','#FF0000',300);
+
+        var dt_now_arr = "{{ query_time }}";
+        dt_now_arr = dt_now_arr.split(":");
+        var dt_obj = new Date(parseInt(dt_now_arr[0]),parseInt(dt_now_arr[1])-1,parseInt(dt_now_arr[2]),parseInt(dt_now_arr[3]),parseInt(dt_now_arr[4]),parseInt(dt_now_arr[5]));
+        dt_obj.getTime();
+        function update_time()
+        {
+            dt_obj.setTime(dt_obj.getTime()+1000);
+        }
+        setInterval(update_time,1000);
+
+        var district_ids = new Array();
+        {% for district_id in district_ids %}
+            district_ids.push({{ district_id }});
+        {% endfor %}
+
+        var region_colors = new Array();
+        function get_region_color(region_id)
+        {
+            return region_colors[region_id];
+        }
+        var region_labels = new Array();
+        function get_region_label(region_id)
+        {
+            return region_labels[region_id];
+        }
+        var dt_list = new Array();
+        {% for dt in dt_list %}
+            dt_list.push("{{ dt }}");
+        {% endfor %}
+
+        function get_dt(idx)
+        {
+            return dt_list[idx];
+        }
+        function query_datetime()
+        {
+            flash("正在更新状态,请稍等!", 10000);
+            var dt_now = format_time(dt_obj,"yyyy-MM-dd hh:mm:ss");
+            $.ajaxSetup({
+                dataType: "json",
+                beforeSend: function (xhr, settings) {
+                    xhr.setRequestHeader("X-CSRFToken", '{{ csrf_token }}');
+                },
+            });
+
+            $.ajax({
+                type: "POST",
+                url: "{% url 'process:query_status' %}?realtime=1&query_dt="+dt_now,
+                success: function (result) {
+                    if (result["code"] == 0) {
+                        for(i=0;i<district_ids.length;i++)
+                        {
+                            var district_id = district_ids[i];
+                            region_labels[district_id] = result["r_"+district_id];
+                            region_colors[district_id] = result[district_id];
+                        }
+                        redraw_polygons();
+                        $("#loading_div2").css('display','none');
+                }
+                else {
+                    alert(result.message);
+                }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.table([{
+                        "错误类型": jqXHR,
+                        "错误信息": textStatus,
+                        "http状态": errorThrown
+                    }])
+                }
+            });
+        }
+    </script>
+{% endblock %}
+{% block content %}
+    <div id="keleyitime1" style="margin-bottom:10px">2017/2/28 {{ now_time }}</div>
+
+	<div id="allmap">
+
+    </div>
+{% endblock %}
+{% block endscript %}
+<script type="text/javascript">
+
+	// 百度地图API功能
+	var map = new BMap.Map("allmap");
+	map.centerAndZoom(new BMap.Point(116.404, 39.915), 12);     // 初始化地图,设置中心点坐标和地图级别
+    map.enableScrollWheelZoom();                        //启用滚轮放大缩小
+    var top_left_control = new BMap.ScaleControl({anchor: BMAP_ANCHOR_BOTTOM_LEFT});// 左上角，添加比例尺
+	var top_left_navigation = new BMap.NavigationControl({anchor: BMAP_ANCHOR_BOTTOM_LEFT});  //左上角，添加默认缩放平移控件
+    map.addControl(top_left_control);
+    map.addControl(top_left_navigation);
+    map.enableKeyboard();
+
+    function redraw_polygons()
+    {
+        map.clearOverlays();
+
+        for ( var region_id in data ){
+        var points = [];  // 添加海量点数据
+
+        for (var i = 0; i < data[region_id].length; i++) {
+                points.push(new BMap.Point(data[region_id][i][0], data[region_id][i][1]));
+        }
+        var geo_center_point = new BMap.Point(geocenter[region_id][0],geocenter[region_id][1]);
+        var marker = new BMap.Marker(geo_center_point);  // 创建标注
+	    map.addOverlay(marker);              // 将标注添加到地图中
+
+        var label = new BMap.Label(get_region_label(region_id),{position :geo_center_point,offset   : new BMap.Size(20, -10)});
+        label.setStyle({
+			 color : "white",
+			 fontSize : "12px",
+             border :"0",
+             backgroundColor :"0.0"
+		 });
+        marker.setLabel(label);
+        var polygon = new BMap.Polygon(points, { strokeColor:"#FFFFFF",fillColor:gradient[get_region_color(region_id)], strokeWeight:1, strokeOpacity:0.5});  // 初始化PointCollection
+        map.addOverlay(polygon);
+    }
+    }
+    var $slider3 = $("#slider3");
+
+    if ($slider3.length > 0) {
+      $slider3.slider({
+        min: 0,
+        max: {{ slider_cnts }},
+        values: 0,
+        orientation: "horizontal",
+        range: "min",
+        slide: function(event, ui) {
+          $("#datetimepicker")
+            .val(get_dt(ui.value));
+        }
+      });
+    }
+    $('#datetimepicker').datetimepicker({
+        language:'zh-CN',
+        autoclose:1,
+        minuteStep:10});
+    $("#keleyitime1").KeleyiLCDClock();
+    $(function(){
+        setInterval(query_datetime,5000);
+    });
+</script>
+{% endblock %}

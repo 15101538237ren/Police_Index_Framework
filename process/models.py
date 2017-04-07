@@ -7,6 +7,7 @@ from django_permanent.models import PermanentModel
 from process.helpers import region_hash
 # Create your models here.
 
+
 #App违法举报对应的数据库表
 class Violation(PermanentModel):
     breach_type = models.IntegerField('违法类型',default=-1)

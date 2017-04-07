@@ -2,60 +2,147 @@
 {% load static from staticfiles %}
 {% block title %}主页{% endblock %}
 {% block head %}
-    <link rel="stylesheet" type="text/css" media="screen" href="{% static "css/jquery-confirm.min.css" %}" />
-    <script type="text/javascript" src="{% static "js/jquery-confirm.min.js" %}" charset="UTF-8"></script>
-    <script type="text/javascript">
-    function flash(text,time)
-    {
-        $("#loading_text").html(text);
-        $("#loading_div2").css('display','block');
-        if(time!=0)setTimeout(function(){
-            $("#loading_div2").css('display','none');
-        },time);
-    }
+<script type="text/javascript" src="{% static "js/data.js" %}"></script>
+    <script>
+
+        var gradient = new gradientColor('#00FF00','#FF0000',300);
+
+        var district_ids = new Array();
+        {% for district_id in district_ids %}
+            district_ids.push({{ district_id }});
+        {% endfor %}
+
+        var region_colors = new Array();
+        function get_region_color(region_id)
+        {
+            return region_colors[region_id];
+        }
+        var region_labels = new Array();
+        function get_region_label(region_id)
+        {
+            return region_labels[region_id];
+        }
+        var dt_list = new Array();
+        {% for dt in dt_list %}
+            dt_list.push("{{ dt }}");
+        {% endfor %}
+
+        function get_dt(idx)
+        {
+            return dt_list[idx];
+        }
+        function query_datetime()
+        {
+            var dt_now = $("#datetimepicker").val();
+            $.ajaxSetup({
+                dataType: "json",
+                beforeSend: function (xhr, settings) {
+                    xhr.setRequestHeader("X-CSRFToken", '{{ csrf_token }}');
+                },
+            });
+
+            $.ajax({
+                type: "POST",
+                url: "{% url 'process:query_status' %}?query_dt="+dt_now,
+                success: function (result) {
+                    if (result["code"] == 0) {
+                        for(i=0;i<district_ids.length;i++)
+                        {
+                            var district_id = district_ids[i];
+                            region_labels[district_id] = result["r_"+district_id];
+                            region_colors[district_id] = result[district_id];
+                        }
+                        redraw_polygons();
+                }
+                else {
+                    alert(result.message);
+                }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.table([{
+                        "错误类型": jqXHR,
+                        "错误信息": textStatus,
+                        "http状态": errorThrown
+                    }])
+                }
+            });
+        }
     </script>
 {% endblock %}
-
 {% block content %}
-<div class="container">
-  <div class="row">
-    <div id="toolbar">
-           <div class="form-inline" role="form">
-            <form class="form-inline"  action="{% url 'process:index' %}" method="POST">
-               <div class="form-group">
-                    <label for="train_region" class="control-label"><small>训练区域:</small></label>
-                    <select id="region_select" class="form-control input-sm" name="train_region" style="width:60px;">
-                        <option value="0" selected="selected">全部</option>
-                          {% for k,v in regions.items %}
-                            <option value="{{ v }}">{{ k }}</option>
-                          {% endfor %}
-                    </select>
-               </div>&nbsp;
-               <div class="form-group">
-                    <label for="week_agg" class="control-label"><small>星期聚合:</small></label>
-                    <select id="region_select" class="form-control input-sm" name="week_agg" style="width:60px;">
-                          {% for k,v in week_agg.items %}
-                              {% ifequal forloop.counter0 0 %}
-                                  <option value="{{ v }}" selected="selected">{{ k }}</option>
-                              {% else %}
-                                   <option value="{{ v }}">{{ k }}</option>
-                              {% endifequal %}
+    <div class="container">
 
-                          {% endfor %}
-                    </select>
-               </div>&nbsp;
-               <div class="form-group">
-                    <label for="date_start" ><small>时间:</small></label>
-                    <input class="form-control form-date input-sm" type="text" name="date_start" style="width: 80px;" data-date-format="yyyy-mm-dd" value="2017-02-01" >—
-                    <input class="form-control form-date input-sm"  type="text" name="date_end" style="width: 80px;"  data-date-format="yyyy-mm-dd" value="2017-02-28" >
-               </div>&nbsp;
-            <div class="form-group">
-                <input type="submit" class="btn btn-default btn-sm" value="训练"/>
-                {% csrf_token %}
-            </div>&nbsp;
-                </form>
-           </div>
+        <div class="form-inline" role="form">
+        <div class="form-group">
+            <label for="dt_query" >时间:</label>
+            <input type="text" class="form-control form-date input-sm" value="2017-02-1 1:00:00" style="width: 180px;"  id="datetimepicker" data-date-format="yyyy-mm-dd hh:ii:ss">
+            <button class="btn btn-primary" onclick="query_datetime()">查询</button>
+            <div id="slider3"></div>
+        </div>&nbsp;
+        </div>
     </div>
-  </div>
-</div>
+	<div id="allmap">
+
+    </div>
+{% endblock %}
+{% block endscript %}
+<script type="text/javascript">
+
+	// 百度地图API功能
+	var map = new BMap.Map("allmap");
+	map.centerAndZoom(new BMap.Point(116.404, 39.915), 12);     // 初始化地图,设置中心点坐标和地图级别
+    map.enableScrollWheelZoom();                        //启用滚轮放大缩小
+    var top_left_control = new BMap.ScaleControl({anchor: BMAP_ANCHOR_BOTTOM_LEFT});// 左上角，添加比例尺
+	var top_left_navigation = new BMap.NavigationControl({anchor: BMAP_ANCHOR_BOTTOM_LEFT});  //左上角，添加默认缩放平移控件
+    map.addControl(top_left_control);
+    map.addControl(top_left_navigation);
+    map.enableKeyboard();
+
+
+    function redraw_polygons()
+    {
+        map.clearOverlays();
+
+        for ( var region_id in data ){
+        var points = [];  // 添加海量点数据
+
+        for (var i = 0; i < data[region_id].length; i++) {
+                points.push(new BMap.Point(data[region_id][i][0], data[region_id][i][1]));
+        }
+        var geo_center_point = new BMap.Point(geocenter[region_id][0],geocenter[region_id][1]);
+        var marker = new BMap.Marker(geo_center_point);  // 创建标注
+	    map.addOverlay(marker);              // 将标注添加到地图中
+
+        var label = new BMap.Label(get_region_label(region_id),{position :geo_center_point,offset   : new BMap.Size(20, -10)});
+        label.setStyle({
+			 color : "white",
+			 fontSize : "12px",
+             border :"0",
+             backgroundColor :"0.0"
+		 });
+        marker.setLabel(label);
+        var polygon = new BMap.Polygon(points, { strokeColor:"#FFFFFF",fillColor:gradient[get_region_color(region_id)], strokeWeight:1, strokeOpacity:0.5});  // 初始化PointCollection
+        map.addOverlay(polygon);
+    }
+    }
+    var $slider3 = $("#slider3");
+
+    if ($slider3.length > 0) {
+      $slider3.slider({
+        min: 0,
+        max: {{ slider_cnts }},
+        values: 0,
+        orientation: "horizontal",
+        range: "min",
+        slide: function(event, ui) {
+          $("#datetimepicker")
+            .val(get_dt(ui.value));
+        }
+      });
+    }
+    $('#datetimepicker').datetimepicker({
+        language:'zh-CN',
+        autoclose:1,
+        minuteStep:10});
+</script>
 {% endblock %}

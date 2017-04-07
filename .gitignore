@@ -8,3 +8,4 @@ geocoding_v1/
 Police_Index_Framework/settings.py
 process/migrations/*
 temp-plot.html
+.DS_Store

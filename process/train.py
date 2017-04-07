@@ -1,8 +1,8 @@
 #coding: utf-8
 
 from process.models import *
-from process.helpers import pinyin_hash
-import datetime,math,plotly
+from process.helpers import pinyin_hash,get_json_template_from,region_hash_anti
+import datetime,math,plotly,json
 import numpy as np
 import plotly.graph_objs as go
 from scipy.optimize import leastsq
@@ -545,8 +545,7 @@ def saveTarinParameter(evecs, row_mins, row_maxs, start_time, end_time, duration
     train_parameter.save()
 
 def trainRegion(start_time, end_time, is_region, is_week, duration=10):
-
-    create_time = datetime.datetime.strptime("2017-02-01 0:0:0", "%Y-%m-%d %H:%M:%S")
+    create_time = datetime.datetime.now()
     if(is_region == 0):
         region_id = 0
         [evecs, row_mins, row_maxs] = train(start_time, end_time, region_id, is_week, duration)
@@ -565,8 +564,10 @@ def trainRegion(start_time, end_time, is_region, is_week, duration=10):
 ##
 def getDataFromeTime(query_time, region, duration=10):
     time_delta = datetime.timedelta(minutes=duration)
-    end_time = query_time + time_delta
-    return [query_time, end_time, get_data_array(query_time, end_time, region, is_week=0, duration=duration, is_calc_police=False, is_normalize=0)]
+    time_delta2 = datetime.timedelta(seconds=1)
+    start_time = query_time - time_delta
+    end_time = query_time - time_delta2
+    return [start_time, end_time, get_data_array(start_time, end_time, region, is_week=0, duration=duration, is_calc_police=False, is_normalize=0)]
 
 def OutputRegionIndex(query_time, duration=10):
     train_parameter = Train_Parameter.objects.order_by('-create_time')[0]  #获取最新的Train_Parameter
@@ -588,15 +589,60 @@ def OutputRegionIndex(query_time, duration=10):
         if all(evecs < np.zeros(len(evecs))):
             evecs = evecs * -1
         evecs_arr = np.array(evecs)
-        #print("region_id: " + str(region_id) + ", evecs = ")
-        #print(evecs_arr)
-        #print(normed_data_array)
+
         transformed_arr = np.matrix(np.transpose(normed_data_array)) * np.transpose(np.matrix(evecs_arr.real))
-        PCA_x = transformed_arr[0, 0]  #取第一个主成分的值
-        #print(PCA_x)
-        region_pca[region_id] = Index_range * PCA_x
+        norm_data = np.ones(normed_data_array.shape)
+        norm_transformed_arr = np.matrix(np.transpose(norm_data)) * np.transpose(np.matrix(evecs_arr.real))
+
+        PCA_x = transformed_arr[0, 0]/norm_transformed_arr[0,0]
+        region_pca[str(region_id)] = int(round(Index_range * PCA_x,2)*100)
     print(region_pca)
     return region_pca
+def test_region_for_timelists(datetime_list,region_id,duration = 10):
+    train_parameter = Train_Parameter.objects.order_by('-create_time')[0]  #获取最新的Train_Parameter
+    Index_range = 3
+    index_list = []
+    for datetime_i in datetime_list:
+        query_time = datetime.datetime.strptime(datetime_i, "%Y-%m-%d %H:%M:%S")
+        [start_time, end_time, result_data] = getDataFromeTime(query_time, region_id, duration=duration)
+        data_array = result_data[0]  ##表示原始4种数据, 4*1的矩阵
+        normed_data_min_list = [float(train_parameter.xmin), float(train_parameter.ymin), float(train_parameter.zmin), float(train_parameter.wmin)]
+        normed_data_list = [float(train_parameter.xmax - train_parameter.xmin), float(train_parameter.ymax - train_parameter.ymin),
+                            float(train_parameter.zmax - train_parameter.zmin), float(train_parameter.wmax - train_parameter.wmin)]
+        normed_data_min = np.transpose(np.matrix(normed_data_min_list))  ##利用转置变成4*1的矩阵
+        normed_data_range = np.transpose(np.matrix(normed_data_list))
+        normed_data_array = (data_array - normed_data_min)/normed_data_range
+        evecs = [float(train_parameter.cx), float(train_parameter.cy), float(train_parameter.cz), float(train_parameter.cw)]
+        if all(evecs < np.zeros(len(evecs))):
+            evecs = evecs * -1
+        evecs_arr = np.array(evecs)
+        transformed_arr = np.matrix(np.transpose(normed_data_array)) * np.transpose(np.matrix(evecs_arr.real))
+        norm_data = np.ones(normed_data_array.shape)
+        norm_transformed_arr = np.matrix(np.transpose(norm_data)) * np.transpose(np.matrix(evecs_arr.real))
+
+        PCA_x = transformed_arr[0, 0]/norm_transformed_arr[0,0]
+
+        region_pca_index= round(Index_range * PCA_x,2)
+        index_list.append(region_pca_index)
+    return index_list
+def get_region_index_to_json(json_load_file,tmp_wrt_file,datetime_list,region_id,duration = 10):
+    index_list = test_region_for_timelists(datetime_list,region_id,duration = 10)
+    datetime_list_rep = []
+    for item in datetime_list:
+        dt_str = str(item).replace(" ","\n")
+        datetime_list_rep.append(dt_str)
+    json_obj = get_json_template_from(json_load_file)
+    json_obj["title"]["text"] =  region_hash_anti[region_id] +u" 指数-时间图"
+    json_obj["xAxis"][0]["data"] = datetime_list_rep
+    json_obj["series"][0]["name"] = u"指数"
+    json_obj["series"][0]["data"] = index_list
+
+    option_file=open(tmp_wrt_file,"w")
+    print ("now writing option file")
+    option_str=json.dumps(json_obj, sort_keys=True, indent=4)
+    option_file.write(option_str)
+    option_file.close()
+    print ("option file writed!")
 
 
 if __name__ == "__main__":

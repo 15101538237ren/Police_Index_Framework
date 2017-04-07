@@ -1,0 +1,18 @@
+﻿.KeleyiLCDclock{background:#CCCCCC;display:inline-block;padding:5px 10px;border:1px #737373 solid}
+.KeleyiLCDclock span{background-image:url(lcdnum.gif);background-repeat:no-repeat;display:inline-block; overflow:hidden; width:20px;height:33px}
+.KeleyiLCDclock span.num0{background-position:0px 0px}
+.KeleyiLCDclock span.num1{background-position:-25px 0}
+.KeleyiLCDclock span.num2{background-position:-50px 0}
+.KeleyiLCDclock span.num3{background-position:-75px 0}
+.KeleyiLCDclock span.num4{background-position:-100px 0}
+.KeleyiLCDclock span.num5{background-position:-125px 0}
+.KeleyiLCDclock span.num6{background-position:-150px 0}
+.KeleyiLCDclock span.num7{background-position:-175px 0}
+.KeleyiLCDclock span.num8{background-position:-200px 0}
+.KeleyiLCDclock span.num9{background-position:-225px 0}
+.KeleyiLCDclock span.numblank{background-position:-315px 0px}
+.KeleyiLCDclock span.numseparator{width:7px;background-position:-250px 0px}
+.KeleyiLCDclock span.numspt{width:15px;background-position:-290px 0px}
+.KeleyiLCDclock span.year{width:18px;background-position:-307px 0px}
+.KeleyiLCDclock span.month{width:18px;background-position:-323px 0px}
+.KeleyiLCDclock span.day{width:18px;background-position:-340px 0px;margin-right:10px}
