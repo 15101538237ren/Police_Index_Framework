@@ -6,6 +6,7 @@ from process.helpers import pinyin_hash,week_hash,ajax_required,success_response
 from import_data import *
 from helpers import region_hash_anti
 import datetime
+from django.db.models import Max
 from os.path import normpath,join
 from Police_Index_Framework.settings import BASE_DIR
 from django.views.decorators.http import require_GET, require_POST
@@ -49,12 +50,22 @@ def realtime_index(request):
     slider_cnts = len(dt_list)
 
     # trainRegion(start_time = start_dt, end_time = end_dt, is_region = is_region, is_week= week_agg, duration=10)
-    query_time = "2017:2:3:" + now_time
+    query_time = "2017:2:28:" + now_time
 
     district_ids = pinyin_hash.values()
     return render_to_response('process/real_time_index.html', locals(), context_instance=RequestContext(request))
 @ajax_required
 def query_status(request):
+
+    year = 2017
+    month = 2
+
+    from_dt = datetime.datetime(year,month,1,0,0,0,0)
+    if month !=12:
+        end_dt = datetime.datetime(year,month+1,1,0,0,0,0)
+    else:
+        end_dt = datetime.datetime(year+1,1,1,0,0,0,0)
+
     real_time = int(request.GET.get("realtime",'0'))
     datetime_query = request.GET.get("query_dt","2017-02-01 0:0:0")
     dt_format="%Y-%m-%d %H:%M:%S"
@@ -64,12 +75,20 @@ def query_status(request):
         ct_time_str = format_time(datetime_query, dt_format)
         print ct_time_str
         datetime_query = datetime.datetime.strptime(ct_time_str, dt_format)
+    qt = datetime.datetime(datetime_query.year,datetime_query.month,datetime_query.day,datetime_query.hour,0,0,0)
     region_pca = OutputRegionIndex(datetime_query, duration=duration)
     region_labels = {}
     for k,v in region_pca.iteritems():
+        police_real = Police.objects.filter(create_time=qt,region=int(k))
+        # if len(police_real)==0:
+        #     police_real_cnt = -1
+        # else:
+        police_real_cnt = int(police_real[0].people_cnt)
+        police_max = Police.objects.filter(create_time__range=[from_dt, end_dt],region=int(k)).aggregate(Max('people_cnt'))["people_cnt__max"]
         region_name = region_hash_anti[int(k)]
         region_index = v
-        label = region_name + u":" + str(region_index/100.0)
+        people_recommend = int((region_index/300.0)*police_max)
+        label = region_name + u":" + str(region_index/100.0) +u"<br/> 实际警力:"+str(police_real_cnt)+u"<br/>建议警力:"+str(people_recommend)
         region_labels[k]= label
     for k,v in region_labels.iteritems():
         region_pca['r_'+k] = v
