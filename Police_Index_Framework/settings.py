@@ -85,6 +85,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'Police_Index_Framework.wsgi.application'
 
+DB_RHEL = True
 
 # Database
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
@@ -93,8 +94,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'police_index',
-        'USER': 'ren',
-        'PASSWORD': 'harry123',
+        'USER': 'ren' if not DB_RHEL else 'root',
+        'PASSWORD': 'harry123' if not DB_RHEL else '',
         'HOST': 'localhost',
         'PORT': '3306',
     }

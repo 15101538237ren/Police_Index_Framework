@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from django.db import models
-from django.utils import timezone
-from ckeditor.fields import RichTextField
 from django_permanent.models import PermanentModel
 from process.helpers import region_hash
 # Create your models here.
