@@ -1,7 +1,6 @@
 # coding: utf-8
 import math,pickle,csv,json,simplejson
 from django.http import JsonResponse,HttpResponse
-from urllib.parse import quote_plus
 
 
 region_hash = {u"东城" : 1, u"西城": 2, u"朝阳": 5, u"海淀": 6,u"丰台":7,u"大兴":8,u"石景山":9}
@@ -110,54 +109,6 @@ def check_point(dataset, lng, lat):
         flag = 1
 
     return flag
-
-
-def urlencode(obj_data, result, p_index = None):
-    if not isinstance(obj_data, dict) and p_index is None:
-        return None
-    # deal list type
-    if isinstance(obj_data, list):
-        for inner_v in obj_data:
-            index_key = p_index
-            if isinstance(inner_v, dict):
-                # recursively call
-                urlencode(inner_v, result, index_key)
-            elif isinstance(inner_v, list):
-                # recursively call
-                urlencode(inner_v, result, '%s[]' % index_key)
-            elif isinstance(inner_v, str):
-                inner_v = inner_v.encode("ASCII","replace")
-                result.append({p_index:inner_v})
-    # deal dict type
-    elif isinstance(obj_data, dict):
-        for key, value in obj_data.items():
-            if p_index is None:
-                index_key = key
-            else:
-                index_key = '%s[%s]' %(p_index, key)
-            if isinstance(value, dict):
-                # recursively call
-                urlencode(value, result, index_key)
-            elif isinstance(value, list):
-                # recursively call
-                urlencode(value, result, '%s[]' % index_key)
-            elif isinstance(value, str):
-                value = value.encode("ASCII","replace")
-                result.append({index_key:value})
-
-def gen_urlforamt_data(obj_data):
-    """
-    format data to url string
-    :obj_data dict type
-    """
-    result = list()
-    urlencode(obj_data, result)
-    url_elm = list()
-    for one_elm in result:
-        for key, value in one_elm.items():
-            encode_elm = '%s=%s' % (quote_plus(key), quote_plus(str(value)))
-            url_elm.append(encode_elm)
-    return '&'.join(url_elm)
 
 
 def json_response(func):

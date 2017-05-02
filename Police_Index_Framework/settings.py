@@ -16,25 +16,33 @@ import os
 from os.path import normpath,join
 import djcelery
 from celery.schedules import crontab
-
-
-BROKER_URL = 'django://localhost:8000//'
-CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
-
-CELERYBEAT_SCHEDULE = {
-    'add-every-10-seconds': {
-        'task': 'tasks.scheduled_jobs',
-        'schedule': crontab(minute='*/10'),  #每十分钟请求一次
-        'args': (16, 16)  #这个地方需要改，加入task需要的函数参数
-    },
-}
-
-
+from datetime import timedelta
 # Django settings
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Police_Index_Framework.settings')
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+djcelery.setup_loader()
+
+BROKER_URL = 'django://localhost:8000//'
+CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler' # 定时任务
+CELERY_RESULT_BACKEND = 'djcelery.backends.database:DatabaseBackend'
+CELERY_ENABLE_UTC = False # 不是用UTC
+CELERY_TIMEZONE = 'Asia/Shanghai'
+CELERY_TASK_RESULT_EXPIRES = 10 #任务结果的时效时间
+CELERYD_LOG_FILE = BASE_DIR + "/data/celery_logs/celery.log" # log路径
+CELERYBEAT_LOG_FILE = BASE_DIR + "/data/celery_logs/beat.log" # beat log路径
+CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml'] # 允许的格式
+
+CELERYBEAT_SCHEDULE = {
+    'exe-every-1-minute': {
+        'task': 'process.tasks.scheduled_jobs',
+        'schedule': crontab(minute='*/1'),
+    },
+}
+
+
 
 
 # Quick-start development settings - unsuitable for production
