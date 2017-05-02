@@ -99,9 +99,9 @@ def train_region(request):
         week_agg = week_hash
         return render_to_response('process/train.html', locals(), context_instance=RequestContext(request))
     else:
-        is_region = int(request.GET.get("train_region",0))
-        week_agg = int(request.GET.get("week_agg",0))
-        from_date = request.GET.get("date_start","2017-02-01")
+        is_region = int(request.GET.get("train_region", 0))
+        week_agg = int(request.GET.get("week_agg", 0))
+        from_date = request.GET.get("date_start", "2017-02-01")
         start_time = "0:0:0"
         end_time = "23:59:59"
         end_date = request.GET.get("date_end","2017-02-28")
