@@ -88,6 +88,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'process.middleware.IPAuthenticationMiddleware'
 )
 
 ROOT_URLCONF = 'Police_Index_Framework.urls'
