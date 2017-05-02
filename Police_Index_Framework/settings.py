@@ -14,9 +14,19 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 import os
 from os.path import normpath,join
 import djcelery
+from celery.schedules import crontab
 
 
 BROKER_URL = 'django://localhost:8000//'
+CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
+
+CELERYBEAT_SCHEDULE = {
+    'add-every-10-seconds': {
+        'task': 'tasks.scheduled_jobs',
+        'schedule': crontab(minute='*/10'),  #每十分钟请求一次
+        'args': (16, 16)  #这个地方需要改，加入task需要的函数参数
+    },
+}
 
 
 # Django settings
