@@ -7,3 +7,6 @@ shuju/
 geocoding_v1/
 .DS_Store
 Dump20170417.sql
+Police_Index_Framework/settings.py
+process/migrations/*
+temp-plot.html

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Django settings for Police_Index_Framework project.
 
@@ -13,6 +14,24 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 from os.path import normpath,join
+import djcelery
+from celery.schedules import crontab
+
+
+BROKER_URL = 'django://localhost:8000//'
+CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
+
+CELERYBEAT_SCHEDULE = {
+    'add-every-10-seconds': {
+        'task': 'tasks.scheduled_jobs',
+        'schedule': crontab(minute='*/10'),  #每十分钟请求一次
+        'args': (16, 16)  #这个地方需要改，加入task需要的函数参数
+    },
+}
+
+
+# Django settings
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Police_Index_Framework.settings')
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -45,8 +64,11 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_crontab',
     'bootstrap3',
     'process',
+    'djcelery',
+    'kombu.transport.django',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -83,20 +105,20 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'Police_Index_Framework.wsgi.application'
 
-DB_RHEL = True
+WSGI_APPLICATION = 'Police_Index_Framework.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
+LAB = False
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'police_index',
-        'USER': 'ren' if not DB_RHEL else 'root',
-        'PASSWORD': 'harry123' if not DB_RHEL else '',
-        'HOST': 'localhost',
+        'USER': 'ren' if not LAB else 'police',
+        'PASSWORD': 'harry123' if not LAB else 'police',
+        'HOST': 'localhost' if not LAB else '192.168.3.119',
         'PORT': '3306',
     }
 }
