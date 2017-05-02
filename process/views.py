@@ -10,6 +10,7 @@ from django.db.models import Max
 from os.path import normpath,join
 from Police_Index_Framework.settings import BASE_DIR
 from django.views.decorators.http import require_GET, require_POST
+from process.api import *
 # evecs_tmp = np.array()
 duration = 10
 def index(request):
@@ -24,7 +25,7 @@ def index(request):
     else:
         end_dt = datetime.datetime(year+1,1,1,0,0,0,0)
 
-    dt_list = generate_str_arr_from_date_to_date(from_dt,end_dt,duration_minute=duration)
+    dt_list = generate_str_arr_from_date_to_date(from_dt, end_dt, duration_minute=duration)
     slider_cnts = len(dt_list)
 
     # trainRegion(start_time = start_dt, end_time = end_dt, is_region = is_region, is_week= week_agg, duration=10)
@@ -76,7 +77,7 @@ def query_status(request):
         print(ct_time_str)
         datetime_query = datetime.datetime.strptime(ct_time_str, dt_format)
     qt = datetime.datetime(datetime_query.year,datetime_query.month,datetime_query.day,datetime_query.hour,0,0,0)
-    region_pca = OutputRegionIndex(datetime_query, duration=duration)
+    region_pca,_, = OutputRegionIndex(datetime_query, duration=duration)
     region_labels = {}
     for k,v in region_pca.items():
         police_real = Police.objects.filter(create_time=qt,region=int(k))

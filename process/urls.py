@@ -9,4 +9,5 @@ urlpatterns = patterns('process.views',
  url(r'^query_status','query_status',name='query_status'),
  url(r'^stat','region_statistics',name='region_statistics'),
  url(r'^load_region_statistics','load_region_statistics',name='load_region_statistics'),
+ url(r'^gate', 'getRealTimePoliceIndex', name='getRealTimePoliceIndex')
 )

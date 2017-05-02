@@ -573,6 +573,7 @@ def OutputRegionIndex(query_time, duration=10):
     train_parameter = Train_Parameter.objects.order_by('-create_time')[0]  #获取最新的Train_Parameter
     Index_range = 3
     region_pca = {}
+    region_pca_xyzw = {}
     for key in pinyin_hash.keys():
         region_id = pinyin_hash[key]
         ##这里调用数据的时候不做normalize
@@ -594,10 +595,15 @@ def OutputRegionIndex(query_time, duration=10):
         norm_data = np.ones(normed_data_array.shape)
         norm_transformed_arr = np.matrix(np.transpose(norm_data)) * np.transpose(np.matrix(evecs_arr.real))
 
-        PCA_x = transformed_arr[0, 0]/norm_transformed_arr[0,0]
-        region_pca[str(region_id)] = int(round(Index_range * PCA_x,2)*100)
+        PCA_norm = transformed_arr[0, 0]/norm_transformed_arr[0,0]
+        PCA_x = normed_data_array[0] * evecs_arr.real[0]
+        PCA_y = normed_data_array[1] * evecs_arr.real[1]
+        PCA_z = normed_data_array[2] * evecs_arr.real[2]
+        PCA_w = normed_data_array[3] * evecs_arr.real[3]
+        region_pca[str(region_id)] = int(round(Index_range * PCA_norm,2)*100)
+        region_pca_xyzw[str(region_id)] = [PCA_x, PCA_y, PCA_z, PCA_w]
     print(region_pca)
-    return region_pca
+    return region_pca, region_pca_xyzw
 def test_region_for_timelists(datetime_list,region_id,duration = 10):
     train_parameter = Train_Parameter.objects.order_by('-create_time')[0]  #获取最新的Train_Parameter
     Index_range = 3

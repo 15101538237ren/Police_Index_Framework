@@ -2,7 +2,6 @@
 
 from django.db import models
 from django.utils import timezone
-from ckeditor.fields import RichTextField
 from django_permanent.models import PermanentModel
 from process.helpers import region_hash
 # Create your models here.
@@ -45,9 +44,12 @@ class App_Incidence(PermanentModel):
 #拥堵指数对应的数据库表
 class Crowd_Index(PermanentModel):
     region = models.SmallIntegerField('区县编号',default=0)
-    group = models.IntegerField('大队编号', default=None)
+    group = models.IntegerField('大队编号', default=None) ##高德系统里大队的ID编号
+    group_name = models.TextField('大队名称', default=None)  ##高德系统中大队名称
+    number = models.IntegerField('拥堵排名', default=None)  ##当前批次的拥堵排名
     bussiness_area = models.TextField('商圈名称',default=None,null=True)
-    avg_car_speed = models.DecimalField('平均车速',max_digits=5,decimal_places=2)
+    avg_car_speed = models.DecimalField('平均车速',max_digits=5,decimal_places=2,default=None)   ##实际的平均速度
+    freespeed = models.DecimalField('自由流速度', max_digits=5,decimal_places=2,default=None)  ##自由流速度
     crowd_index = models.DecimalField('拥堵延时指数',max_digits=5,decimal_places=2)
     create_time = models.DateTimeField('时间')
     def __unicode__(self):
@@ -87,6 +89,9 @@ class Train_Parameter(PermanentModel):
                + ',a:' + str(self.a) + ',b:' + str(self.b) + '\n'
 
 class Prediction_Info(PermanentModel):
+    region = models.SmallIntegerField('区县编号', default=None)
+    group = models.IntegerField('大队编号', default=0)
+    index = models.DecimalField('指挥指数', max_digits=8, decimal_places=4, default=None)
     PCAx = models.DecimalField('延迟指数PCA', max_digits=10, decimal_places=4, default=None)
     PCAy = models.DecimalField('APP举报PCA', max_digits=10, decimal_places=4, default=None)
     PCAz = models.DecimalField('APP事故PCA', max_digits=10, decimal_places=4, default=None)

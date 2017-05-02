@@ -1,6 +1,7 @@
 #coding=utf-8
 
 import urllib,urllib.request ##python2 对应urllib2
+import urllib.parse
 import http.client  ##python2 对应为httplib
 #########
 ##Python2

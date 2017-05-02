@@ -13,6 +13,14 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 from os.path import normpath,join
+import djcelery
+
+
+BROKER_URL = 'django://localhost:8000//'
+
+
+# Django settings
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Police_Index_Framework.settings')
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -45,8 +53,11 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_crontab',
     'bootstrap3',
     'process',
+    'djcelery',
+    'kombu.transport.django',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -83,19 +94,21 @@ TEMPLATES = [
     },
 ]
 
+
 WSGI_APPLICATION = 'Police_Index_Framework.wsgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
+LAB = False
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'police_index',
-        'USER': 'root',
-        'PASSWORD': '',
-        'HOST': 'localhost',
+        'USER': 'root' if not LAB else 'police',
+        'PASSWORD': '' if not LAB else 'police',
+        'HOST': 'localhost' if not LAB else '192.168.3.119',
         'PORT': '3306',
     }
 }
