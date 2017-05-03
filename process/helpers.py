@@ -36,16 +36,12 @@ def ajax_required(func):
 def success_response(**response_dict):
     response_dict["code"]=0
     return JsonResponse(response_dict)
-
 def get_json_template_from(file_path):
     fp=open(file_path,"r")
     json_str = json.loads(json.dumps(fp.read()))
     json_obj = json.loads(json_str)
     fp.close()
     return json_obj
-
-
-
 # 检查一个点是否在道路的多边形区域内
 # 如果在多边形内，返回值为1
 # 如果在多边形外，而且离多边形很远，返回值为0
@@ -109,8 +105,6 @@ def check_point(dataset, lng, lat):
         flag = 1
 
     return flag
-
-
 def json_response(func):
     """
     A decorator thats takes a view response and turns it

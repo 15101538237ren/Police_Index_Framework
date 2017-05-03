@@ -3,6 +3,7 @@ import xlrd,os,datetime,pytz,pickle,csv,calendar
 from process.models import *
 from process.helpers import pinyin_hash,check_point,region_hash2
 from process.baidumap import BaiduMap
+from process.convert import bd2gcj
 
 district_row_no = {"dongcheng":3, "xicheng":4, "chaoyang":5, "haidian":6,"fengtai":7,"shijingshan":8,"daxing":19}
 sheet_idx = {2:"dongcheng",3:"xicheng",4:"haidian",5:"chaoyang",6:"daxing",7:"shijingshan",8:"fengtai"}
@@ -13,6 +14,53 @@ LNG_INDEX = 0
 LAT_INDEX = 1
 EPS = 0.000001
 
+def convert_baidu_to_gaode_of_database():
+    print "start fetch violations"
+    violations = Violation.objects.all()
+    print "fetched %d violations" % len(violations)
+    for idx,violation in enumerate(violations):
+        lng = float(violation.longitude)
+        lat = float(violation.latitude)
+        point = [lng, lat]
+        lng,lat = bd2gcj(point)
+        violation.longitude = lng
+        violation.latitude = lat
+        violation.save()
+
+        if idx % 10000 ==0:
+            print "handle violation of %d objs" % idx
+
+    print "start fetch call_incidences"
+    call_incidences = Call_Incidence.objects.all()
+    print "fetched %d call_incidences" % len(call_incidences)
+
+    for idx,call_incidence in enumerate(call_incidences):
+        lng = float(call_incidence.longitude)
+        lat = float(call_incidence.latitude)
+        point = [lng, lat]
+        lng,lat = bd2gcj(point)
+        call_incidence.longitude = lng
+        call_incidence.latitude = lat
+        call_incidence.save()
+
+        if idx % 10000 ==0:
+            print "handle call_incidence of %d objs" % idx
+
+    print "start fetch app_incidences"
+    app_incidences = App_Incidence.objects.all()
+    print "fetched %d app_incidences" % len(app_incidences)
+
+    for idx,app_incidence in enumerate(app_incidences):
+        lng = float(app_incidence.longitude)
+        lat = float(app_incidence.latitude)
+        point = [lng, lat]
+        lng,lat = bd2gcj(point)
+        app_incidence.longitude = lng
+        app_incidence.latitude = lat
+        app_incidence.save()
+
+        if idx % 10000 ==0:
+            print "handle app_incidence of %d objs" % idx
 # 获取excel的列对应的数字编号
 def get_excel_index():
     excel_index_list = [chr(i) for i in range(65,91)]
