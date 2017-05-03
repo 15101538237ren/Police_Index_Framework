@@ -4,7 +4,7 @@ from process.models import *
 from process.helpers import pinyin_hash,check_point,region_hash2
 from process.baidumap import BaiduMap
 from process.convert import bd2gcj
-
+import MySQLdb
 district_row_no = {"dongcheng":3, "xicheng":4, "chaoyang":5, "haidian":6,"fengtai":7,"shijingshan":8,"daxing":19}
 sheet_idx = {2:"dongcheng",3:"xicheng",4:"haidian",5:"chaoyang",6:"daxing",7:"shijingshan",8:"fengtai"}
 dadui_hash = {u"中关村(西苑)队":u"海淀",u"樱桃园大队":u"西城",u"亚运村队":u"朝阳",u"西外队":u"西城",u"西四队":u"西城",u"西单队":u"西城",u"温泉队":u"海淀",u"天坛大队":u"东城",u"双桥队":u"朝阳",u"清河队":u"海淀",u"前门大队":u"东城",u"劲松(东三环)队":u"朝阳",u"机场队":u"朝阳",u"黄庄(西三环)队":u"海淀",u"呼家楼队":u"朝阳",u"和平里队":u"东城",u"广安门大队":u"西城",u"公主坟队":u"海淀",u"府右街队":u"西城",u"东外队":u"朝阳",u"东四队":u"东城",u"东单队":u"东城",u"大红门队":u"丰台",u"方庄队":u"丰台",u"丰北队":u"丰台",u"卢沟桥队":u"丰台",u"西站队":u"丰台",}
@@ -14,6 +14,151 @@ LNG_INDEX = 0
 LAT_INDEX = 1
 EPS = 0.000001
 
+def import_call_incidence_data_fromdb(dt_start,dt_end, roadset_pkl_path):
+    roadset_pkl_file = open(roadset_pkl_path,"rb")
+    roadset = pickle.load(roadset_pkl_file)
+    roadset_pkl_file.close()
+    try:
+        conn=MySQLdb.connect(host='localhost',user='ren',passwd='harry123',db='accidents_prediction',port=3306)
+        cur=conn.cursor()
+        cur.execute("SELECT * FROM preprocessing_call_incidence where create_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and create_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
+        result = cur.fetchall()
+        print "len results %d" % len(result)
+        for idx,(id, removed, create_time, lng, lat, place) in enumerate(result):
+            lng = float(lng)
+            lat = float(lat)
+            #先用百度的边界查询在哪个区
+            for j in range(len(roadset)):
+                if roadset[j]["name"] in pinyin_hash.keys():
+                    if (not (roadset[j]['minX'] <= lng and lng <= roadset[j]['maxX'] and roadset[j]['minY'] <=lat and lat <= roadset[j]['maxY'])):
+                        continue
+                    data_set = roadset[j]["data"]
+                    flag = check_point(data_set,lng,lat)
+                    if flag:
+                        region = pinyin_hash[roadset[j]["name"]]
+                        point = [lng, lat]
+                        lng,lat = bd2gcj(point)
+                        #转换成高德坐标再存
+                        call_incidence = Call_Incidence(region=region, group = 0,create_time = create_time, longitude=lng, latitude=lat, event_content=u"",place = place)
+                        call_incidence.save()
+
+            if idx % 10000 == 0:
+                print "imported %d call incidences" % idx
+        cur.close()
+        conn.close()
+    except MySQLdb.Error,e:
+         print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+
+
+#修正一些区的编号不正确的问题
+def correct_region_id_of_db():
+    print "start fetch violations"
+    violations = Violation.objects.all()
+    print "fetched %d violations" % len(violations)
+    for idx,violation in enumerate(violations):
+        region = violation.region
+        #大兴修正
+        if region == 8:
+            violation.region = 15
+            violation.save()
+        #石景山修正
+        elif region == 9:
+            violation.region = 8
+            violation.save()
+        if idx % 10000 ==0:
+            print "handle violation of %d objs" % idx
+
+    print "start fetch call_incidences"
+    call_incidences = Call_Incidence.objects.all()
+    print "fetched %d call_incidences" % len(call_incidences)
+
+    for idx,call_incidence in enumerate(call_incidences):
+        region = call_incidence.region
+        #大兴修正
+        if region == 8:
+            call_incidence.region = 15
+            call_incidence.save()
+        #石景山修正
+        elif region == 9:
+            call_incidence.region = 8
+            call_incidence.save()
+
+        if idx % 10000 ==0:
+            print "handle call_incidence of %d objs" % idx
+
+    print "start fetch app_incidences"
+    app_incidences = App_Incidence.objects.all()
+    print "fetched %d app_incidences" % len(app_incidences)
+
+    for idx,app_incidence in enumerate(app_incidences):
+        region = app_incidence.region
+        #大兴修正
+        if region == 8:
+            app_incidence.region = 15
+            app_incidence.save()
+        #石景山修正
+        elif region == 9:
+            app_incidence.region = 8
+            app_incidence.save()
+
+        if idx % 10000 ==0:
+            print "handle app_incidence of %d objs" % idx
+
+    print "start fetch crowd_indexs"
+    crowd_indexs = Crowd_Index.objects.all()
+    print "fetched %d crowd_indexs" % len(crowd_indexs)
+
+    for idx,crowd_index in enumerate(crowd_indexs):
+        region = crowd_index.region
+        #大兴修正
+        if region == 8:
+            crowd_index.region = 15
+            crowd_index.save()
+        #石景山修正
+        elif region == 9:
+            crowd_index.region = 8
+            crowd_index.save()
+
+        if idx % 10000 ==0:
+            print "handle crowd_index of %d objs" % idx
+
+    print "start fetch polices"
+    polices = Police.objects.all()
+    print "fetched %d polices" % len(polices)
+
+    for idx,police in enumerate(polices):
+        region = police.region
+        #大兴修正
+        if region == 8:
+            police.region = 15
+            police.save()
+        #石景山修正
+        elif region == 9:
+            police.region = 8
+            police.save()
+
+        if idx % 10000 ==0:
+            print "handle police of %d objs" % idx
+
+    print "start fetch train_parameters"
+    train_parameters = Train_Parameter.objects.all()
+    print "fetched %d train_parameters" % len(train_parameters)
+
+    for idx,train_parameter in enumerate(train_parameters):
+        region = train_parameter.region
+        #大兴修正
+        if region == 8:
+            train_parameter.region = 15
+            train_parameter.save()
+        #石景山修正
+        elif region == 9:
+            train_parameter.region = 8
+            train_parameter.save()
+
+        if idx % 10000 ==0:
+            print "handle train_parameter of %d objs" % idx
+
+#将数据库中所有经纬度从百度坐标转换为高德坐标
 def convert_baidu_to_gaode_of_database():
     print "start fetch violations"
     violations = Violation.objects.all()
@@ -61,6 +206,7 @@ def convert_baidu_to_gaode_of_database():
 
         if idx % 10000 ==0:
             print "handle app_incidence of %d objs" % idx
+
 # 获取excel的列对应的数字编号
 def get_excel_index():
     excel_index_list = [chr(i) for i in range(65,91)]

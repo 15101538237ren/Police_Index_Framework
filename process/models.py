@@ -45,11 +45,11 @@ class App_Incidence(PermanentModel):
 class Crowd_Index(PermanentModel):
     region = models.SmallIntegerField('区县编号',default=-1)
     group = models.IntegerField('大队编号', default=-1) ##高德系统里大队的ID编号
-    group_name = models.TextField('大队名称', default=None)  ##高德系统中大队名称
-    number = models.IntegerField('拥堵排名', default=None)  ##当前批次的拥堵排名
-    bussiness_area = models.TextField('商圈名称',default=None,null=True)
-    avg_car_speed = models.DecimalField('平均车速',max_digits=5,decimal_places=2,default=None)   ##实际的平均速度
-    freespeed = models.DecimalField('自由流速度', max_digits=5,decimal_places=2,default=None)  ##自由流速度
+    group_name = models.TextField('大队名称', default=u"")  ##高德系统中大队名称
+    number = models.IntegerField('拥堵排名', default=-1,null=True)  ##当前批次的拥堵排名
+    bussiness_area = models.TextField('商圈名称',default=u"",null=True)
+    avg_car_speed = models.DecimalField('平均车速',max_digits=5,decimal_places=2,default=-1)   ##实际的平均速度
+    freespeed = models.DecimalField('自由流速度', max_digits=5,decimal_places=2,default=-1)  ##自由流速度
     crowd_index = models.DecimalField('拥堵延时指数',max_digits=5,decimal_places=2)
     create_time = models.DateTimeField('时间')
     def __unicode__(self):
@@ -109,3 +109,16 @@ class Region_Boundary(PermanentModel):
     group = models.IntegerField('大队编号', default = -1)
     group_name = models.TextField('名称',default=u'无名')
     geo_boundary = models.TextField('边界')
+#大队支队对应关系表
+class Dadui_ID(PermanentModel):
+    group_short_name = models.TextField('大队简称',default=u'')
+    gruop_122_name = models.TextField('大队122名称',default=u'')
+    group_gaode_name = models.TextField('大队高德名称',default=u'')
+
+    group_gaode_id = models.IntegerField('大队高德编号', default = -1)
+    group_122_id = models.IntegerField('大队122编号', default = -1)
+
+    region_name = models.TextField('区县名称', default=u'')
+
+    region_122_id = models.SmallIntegerField('区县122编号', default=-1)
+    region_gaode_id = models.SmallIntegerField('区县高德编号', default=-1)

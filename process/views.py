@@ -16,7 +16,11 @@ from process.api import *
 duration = 10
 #大队边界可视化
 def dadui_visualize(request):
-    get_crowd_index()
+    dt_start = datetime.datetime(2016,5,4,0,0,0,0)
+    dt_end = datetime.datetime(2017,1,1,0,0,0,0)
+
+    path_pkl_path = "/Users/Ren/PycharmProjects/Police_Index_Framework/data/boundary.pkl"
+    import_call_incidence_data_fromdb(dt_start,dt_end,path_pkl_path)
     return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
 def index(request):
     year = 2017

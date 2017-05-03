@@ -5,7 +5,7 @@ import urllib,urllib2,json
 
 #目前数据库中的所有大队id列表
 group_ids = [item.group for item in Region_Boundary.objects.all()]
-
+group_shortnames = [item.group_short_name for item in Dadui_ID.objects.all()]
 def get_crowd_index():
     real_index_url = 'https://tp-restapi.amap.com/gate?sid=30010&reqData={%22city%22:%22110000%22,%22dateType%22:0,%22userdefined%22:%22true%22}&serviceKey=2F77255FF77D948DF3FED20E0C19B14F'
     req = urllib2.Request(real_index_url)
@@ -19,16 +19,33 @@ def get_crowd_index():
                 for idx, data in enumerate(result["data"]):
                     group_id =  int(data["id"].split("_")[1]) if "id" in result["data"][idx].keys() else -1
                     group_name = data["name"] if "name" in result["data"][idx].keys() else u"非法"
+
                     if group_id == -1 or group_name == u"非法":
                         continue
+
                     if group_id not in group_ids:
                         rid = "22_"+str(group_id)
                         succ = get_boundary_of(rid, group_name)
                         group_ids.append(group_id)
                         print "get_boundary_of %s: %d" %(rid, succ)
+                    group_shortname = group_name.replace(u"大队",u"")
+                    #大队和122的有交集
+                    if group_shortname in group_shortnames:
+                        dadui = Dadui_ID.objects.filter(group_short_name=group_shortname)[0]
+                        region = dadui.region_122_id
+                        if dadui.group_gaode_id == -1:
+                            dadui.group_gaode_id = group_id
+                        if dadui.group_gaode_name.strip() == u"":
+                            dadui.group_gaode_name = group_name
+                        dadui.save()
+                    else:
+                        region = -1
                     index = data["index"] if "index" in result["data"][idx].keys() else 0.0
                     speed = data["speed"] if "speed" in result["data"][idx].keys() else 0.0
                     freespeed = data["freespeed"] if "freespeed" in result["data"][idx].keys() else 0.0
+                    create_time = datetime.datetime.now()
+                    crowd_index = Crowd_Index(region=region, group=group_id,group_name=group_name,avg_car_speed=speed, freespeed=freespeed,crowd_index=index,create_time=create_time)
+                    crowd_index.save()
     return succ
 #获取指定区域的id
 def get_boundary_of(rid, group_name):
