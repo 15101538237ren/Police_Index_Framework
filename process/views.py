@@ -4,6 +4,7 @@ from django.template import RequestContext
 from process.train import *
 from process.helpers import pinyin_hash,week_hash,ajax_required,success_response
 from import_data import *
+from crontab_jobs import *
 from helpers import region_hash_anti
 import datetime
 from django.db.models import Max
@@ -11,8 +12,12 @@ from os.path import normpath,join
 from Police_Index_Framework.settings import BASE_DIR
 from django.views.decorators.http import require_GET, require_POST
 from process.api import *
-# evecs_tmp = np.array()
+
 duration = 10
+#大队边界可视化
+def dadui_visualize(request):
+    get_crowd_index()
+    return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
 def index(request):
     year = 2017
     month = 2

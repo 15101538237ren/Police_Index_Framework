@@ -107,4 +107,5 @@ class Prediction_Info(PermanentModel):
 class Region_Boundary(PermanentModel):
     region = models.SmallIntegerField('区县编号', default=-1)
     group = models.IntegerField('大队编号', default = -1)
+    group_name = models.TextField('名称',default=u'无名')
     geo_boundary = models.TextField('边界')

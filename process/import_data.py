@@ -266,6 +266,9 @@ def import_call_incidence_data(input_call_incidence_file,path_pkl_path):
                         call_incidence.save()
                         break
     print("import call 122 finished!")
+
+
+
 if __name__ == "__main__":
 
     input_call_incidence_file = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2017/shuju/122_17-01.xls"
