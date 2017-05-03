@@ -14,6 +14,8 @@ LNG_INDEX = 0
 LAT_INDEX = 1
 EPS = 0.000001
 
+#从另外一个数据库中将122报警数据导入到此数据库
+
 def import_call_incidence_data_fromdb(dt_start,dt_end, roadset_pkl_path):
     roadset_pkl_file = open(roadset_pkl_path,"rb")
     roadset = pickle.load(roadset_pkl_file)

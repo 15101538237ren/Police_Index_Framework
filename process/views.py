@@ -20,7 +20,8 @@ def dadui_visualize(request):
     dt_end = datetime.datetime(2017,1,1,0,0,0,0)
 
     path_pkl_path = "/Users/Ren/PycharmProjects/Police_Index_Framework/data/boundary.pkl"
-    import_call_incidence_data_fromdb(dt_start,dt_end,path_pkl_path)
+    getRealTimePoliceIndex(request)
+    # import_call_incidence_data_fromdb(dt_start,dt_end,path_pkl_path)
     return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
 def index(request):
     year = 2017

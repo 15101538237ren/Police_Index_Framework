@@ -9,6 +9,7 @@ from django.db.models import Max
 from process.train import OutputRegionIndex
 from django.http import JsonResponse
 from process.helpers import json_response
+import urllib2,random
 
 def insertData():
     from_dt = datetime.datetime(2016, 12, 1, 0, 0, 0, 0)
@@ -47,21 +48,40 @@ def insertData():
 @json_response
 def getRealTimePoliceIndex(request):
     if request.method == "GET":
-        service = request.GET.get("service", None)
-        serviceKey = request.GET.get("serviceKey", None)
-        callback = request.GET.get("callback", None)
-        reqData = request.GET.get("reqData", None)
-        data_list = [{"description":"","freespeed":42.9933,"id":"22_10002","index":1.8766,"name":"西单大队","number":1,"speed":14.946},
-                    {"description":"","freespeed":39.0491,"id":"22_27","index":2.1908,"name":"东单大队","number":2,"speed":15.6774},
-                    {"description":"","freespeed":28.176,"id":"22_15","index":1.236,"name":"府右街大队","number":3,"speed":11.576},
-                    {"description":"","freespeed":47.3186,"id":"22_10004","index":2.3528,"name":"西外大队","number":4,"speed":20.1117},
-                    {"description":"","freespeed":31.5018,"id":"22_28","index":2.152,"name":"东四大队","number":5,"speed":14.6384},
-                    {"description":"","freespeed":39.0468,"id":"22_10001","index":0.4959,"name":"中心区交通支队","number":6,"speed":18.6298},
-                    {"description":"","freespeed":43.02,"id":"22_29","index":1.4246,"name":"和平里大队","number":7,"speed":21.2481},
-                    {"description":"","freespeed":30.2102,"id":"22_10003","index":1.7829,"name":"西四大队","number":8,"speed":15.2356},
-                    {"description":"","freespeed":37.1552,"id":"22_16","index":1.1904,"name":"广安门大队","number":9,"speed":19.6548},
-                    {"description":"","freespeed":42.0894,"id":"22_30","index":2.2588,"name":"前门大队","number":10,"speed":22.6428},
-                    {"description":"","freespeed":46.9894,"id":"22_31","index":1.376,"name":"天坛大队","number":11,"speed":28.0366},
-                    {"description":"","freespeed":47.6813,"id":"22_17","index":0.6297,"name":"樱桃园大队","number":12,"speed":29.3738}]
-        #result_str = "ABC(%s)" % json.dumps(data_list)
+        # service = request.GET.get("service", None)
+        # serviceKey = request.GET.get("serviceKey", None)
+        # callback = request.GET.get("callback", None)
+        # reqData = request.GET.get("reqData", None)
+        real_index_url = 'https://tp-restapi.amap.com/gate?sid=30010&reqData={%22city%22:%22110000%22,%22dateType%22:0,%22userdefined%22:%22true%22}&serviceKey=2F77255FF77D948DF3FED20E0C19B14F'
+        req = urllib2.Request(real_index_url)
+        res = urllib2.urlopen(req).read()
+        result = json.loads(res.decode("utf-8"))
+        data_list = []
+        succ = 0
+        if ("status" in result.keys()) and ("data" in result.keys()):
+            if "code" in result["status"]:
+                if result["status"]["code"] == 0:
+                    succ = 1
+                    for idx, data in enumerate(result["data"]):
+                        index = data["index"] if "index" in result["data"][idx].keys() else 0.0
+                        data["violation_index"] = index/3.0 +random.random()
+                        data["accidents_index"] = index/3.0 +random.random()
+                        data["crowd_index"] = index/3.0 +random.random()
+                        data["real_police_cnt"] = random.randint(1,200)
+                        data["suggested_police_cnt"] = random.randint(1,200)
+                        data_list.append(data)
+        if not succ:
+            temp_data_list = [{"description":"","freespeed":42.9933,"id":"22_10002","index":1.8766,"name":"西单大队","number":1,"speed":14.946},
+                        {"description":"","freespeed":39.0491,"id":"22_27","index":2.1908,"name":"东单大队","number":2,"speed":15.6774},
+                        {"description":"","freespeed":28.176,"id":"22_15","index":1.236,"name":"府右街大队","number":3,"speed":11.576},
+                        {"description":"","freespeed":47.3186,"id":"22_10004","index":2.3528,"name":"西外大队","number":4,"speed":20.1117},
+                        {"description":"","freespeed":31.5018,"id":"22_28","index":2.152,"name":"东四大队","number":5,"speed":14.6384},
+                        {"description":"","freespeed":39.0468,"id":"22_10001","index":0.4959,"name":"中心区交通支队","number":6,"speed":18.6298},
+                        {"description":"","freespeed":43.02,"id":"22_29","index":1.4246,"name":"和平里大队","number":7,"speed":21.2481},
+                        {"description":"","freespeed":30.2102,"id":"22_10003","index":1.7829,"name":"西四大队","number":8,"speed":15.2356},
+                        {"description":"","freespeed":37.1552,"id":"22_16","index":1.1904,"name":"广安门大队","number":9,"speed":19.6548},
+                        {"description":"","freespeed":42.0894,"id":"22_30","index":2.2588,"name":"前门大队","number":10,"speed":22.6428},
+                        {"description":"","freespeed":46.9894,"id":"22_31","index":1.376,"name":"天坛大队","number":11,"speed":28.0366},
+                        {"description":"","freespeed":47.6813,"id":"22_17","index":0.6297,"name":"樱桃园大队","number":12,"speed":29.3738}]
+            data_list = temp_data_list
         return data_list
