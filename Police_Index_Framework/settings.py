@@ -14,7 +14,7 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 from os.path import normpath,join
-import djcelery
+import djcelery,pickle
 from celery.schedules import crontab
 from datetime import timedelta
 # Django settings
@@ -146,7 +146,9 @@ USE_L10N = True
 
 USE_TZ = False
 
-
+roadset_pkl_file = open(BASE_DIR+ os.sep+ "data"+os.sep+"boundary.pkl","rb")
+roadset = pickle.load(roadset_pkl_file)
+roadset_pkl_file.close()
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
 

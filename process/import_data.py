@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-import xlrd,os,datetime,pytz,pickle,csv,calendar
+import xlrd,os,datetime,pytz,csv,calendar
 from process.models import *
 from process.helpers import pinyin_hash,check_point,region_hash2
 from process.baidumap import BaiduMap
 from process.convert import bd2gcj
+from Police_Index_Framework.settings import roadset
 import MySQLdb
 district_row_no = {"dongcheng":3, "xicheng":4, "chaoyang":5, "haidian":6,"fengtai":7,"shijingshan":8,"daxing":19}
 sheet_idx = {2:"dongcheng",3:"xicheng",4:"haidian",5:"chaoyang",6:"daxing",7:"shijingshan",8:"fengtai"}
@@ -16,10 +17,7 @@ EPS = 0.000001
 
 #从另外一个数据库中将122报警数据导入到此数据库
 
-def import_call_incidence_data_fromdb(dt_start,dt_end, roadset_pkl_path):
-    roadset_pkl_file = open(roadset_pkl_path,"rb")
-    roadset = pickle.load(roadset_pkl_file)
-    roadset_pkl_file.close()
+def import_call_incidence_data_fromdb(dt_start,dt_end):
     try:
         conn=MySQLdb.connect(host='localhost',user='ren',passwd='harry123',db='accidents_prediction',port=3306)
         cur=conn.cursor()
@@ -51,10 +49,7 @@ def import_call_incidence_data_fromdb(dt_start,dt_end, roadset_pkl_path):
     except MySQLdb.Error,e:
          print "Mysql Error %d: %s" % (e.args[0], e.args[1])
 
-def import_violation_data_from_db(dt_start,dt_end, roadset_pkl_path):
-    roadset_pkl_file = open(roadset_pkl_path,"rb")
-    roadset = pickle.load(roadset_pkl_file)
-    roadset_pkl_file.close()
+def import_violation_data_from_db(dt_start,dt_end):
     try:
         conn=MySQLdb.connect(host='localhost',user='ren',passwd='harry123',db='accidents_prediction',port=3306)
         cur=conn.cursor()
@@ -314,10 +309,8 @@ def import_crowd_data(input_crowd_file_path):
                 crowd_index.save()
     #print "import crowd data_successful"
 #导入违法数据
-def import_violation_data(input_violation_file,path_pkl_path):
+def import_violation_data(input_violation_file):
     get_excel_index()
-    path_pkl_file = open(path_pkl_path,"rb")
-    roadset = pickle.load(path_pkl_file)
 
     file = xlrd.open_workbook(input_violation_file)
     table = file.sheets()[0]
@@ -384,16 +377,13 @@ def import_app_incidence_data(input_app_incidence_file):
     print("load app incidence data successful!")
 
 #导入122电话事故举报数据
-def import_call_incidence_data(input_call_incidence_file,path_pkl_path):
+def import_call_incidence_data(input_call_incidence_file):
     get_excel_index()
     TIME_INDEX = 'O'
     LON_INDEX = 'H'  #数据中存在经纬度都是0的情况，表示经纬度不存在
     LAT_INDEX = 'I'
     CONTENT_INDEX = 'M'
     PLACE_INDEX = 'T'
-
-    path_pkl_file = open(path_pkl_path, "rb")
-    roadset = pickle.load(path_pkl_file)
 
     file = xlrd.open_workbook(input_call_incidence_file)
     file_sheets = file.sheets()
@@ -454,9 +444,8 @@ def import_call_incidence_data(input_call_incidence_file,path_pkl_path):
 if __name__ == "__main__":
 
     input_call_incidence_file = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2017/shuju/122_17-01.xls"
-    path_pkl_path = "/Users/Ren/PycharmProjects/Police_Index_Framework/data/boundary.pkl"
 
-    import_call_incidence_data(input_call_incidence_file=input_call_incidence_file,path_pkl_path=path_pkl_path)
+    import_call_incidence_data(input_call_incidence_file=input_call_incidence_file)
 
     input_app_incidence_file = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2017/shuju/app_incidence_2017_1_2.xls"
 
@@ -464,7 +453,7 @@ if __name__ == "__main__":
 
     input_violation_file = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2017/shuju/violation_2017_1_2.xlsx"
 
-    import_violation_data(input_violation_file=input_violation_file,path_pkl_path=path_pkl_path)
+    import_violation_data(input_violation_file=input_violation_file)
 
     input_crowd_file_path = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2017/shuju/crowd_2017_1_2.xlsx"
 
