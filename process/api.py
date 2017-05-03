@@ -64,9 +64,9 @@ def getRealTimePoliceIndex(request):
                     succ = 1
                     for idx, data in enumerate(result["data"]):
                         index = data["index"] if "index" in result["data"][idx].keys() else 0.0
-                        data["violation_index"] = index/3.0 +random.random()
-                        data["accidents_index"] = index/3.0 +random.random()
-                        data["crowd_index"] = index/3.0 +random.random()
+                        data["violation_index"] = round(index/3.0 +random.random(),4)
+                        data["accidents_index"] = round(index/3.0 +random.random(),4)
+                        data["crowd_index"] = round(index/3.0 +random.random(),4)
                         data["real_police_cnt"] = random.randint(1,200)
                         data["suggested_police_cnt"] = random.randint(1,200)
                         data_list.append(data)

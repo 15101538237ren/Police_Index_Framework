@@ -51,6 +51,40 @@ def import_call_incidence_data_fromdb(dt_start,dt_end, roadset_pkl_path):
     except MySQLdb.Error,e:
          print "Mysql Error %d: %s" % (e.args[0], e.args[1])
 
+def import_violation_data_from_db(dt_start,dt_end, roadset_pkl_path):
+    roadset_pkl_file = open(roadset_pkl_path,"rb")
+    roadset = pickle.load(roadset_pkl_file)
+    roadset_pkl_file.close()
+    try:
+        conn=MySQLdb.connect(host='localhost',user='ren',passwd='harry123',db='accidents_prediction',port=3306)
+        cur=conn.cursor()
+        cur.execute("SELECT * FROM preprocessing_violation where create_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and create_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
+        result = cur.fetchall()
+        print "len results %d" % len(result)
+        for idx,(id, removed, lng, lat, create_time) in enumerate(result):
+            lng = float(lng)
+            lat = float(lat)
+            #先用百度的边界查询在哪个区
+            for j in range(len(roadset)):
+                if roadset[j]["name"] in pinyin_hash.keys():
+                    if (not (roadset[j]['minX'] <= lng and lng <= roadset[j]['maxX'] and roadset[j]['minY'] <=lat and lat <= roadset[j]['maxY'])):
+                        continue
+                    data_set = roadset[j]["data"]
+                    flag = check_point(data_set,lng,lat)
+                    if flag:
+                        region = pinyin_hash[roadset[j]["name"]]
+                        point = [lng, lat]
+                        lng,lat = bd2gcj(point)
+                        #转换成高德坐标再存
+                        violation = Violation(breach_type= -1,region=region, group = 0,create_time = create_time, longitude=lng, latitude=lat)
+                        violation.save()
+
+            if idx % 10000 == 0:
+                print "imported %d violations" % idx
+        cur.close()
+        conn.close()
+    except MySQLdb.Error,e:
+         print "Mysql Error %d: %s" % (e.args[0], e.args[1])
 
 #修正一些区的编号不正确的问题
 def correct_region_id_of_db():
