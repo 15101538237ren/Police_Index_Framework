@@ -120,6 +120,7 @@ def judge_region(lng, lat):
                 region = pinyin_hash[roadset[j]["name"]]
                 return region
     return region
+#将所有表格(除了拥堵指数表)label 大队id
 def label_all_dadui_id_of_db(dt_start,dt_end):
     app_incidences = App_Incidence.objects.filter(create_time__range=[dt_start,dt_end])
     print "len app_incidences %d" % len(app_incidences)
