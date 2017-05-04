@@ -7,10 +7,9 @@ from process.helpers import pinyin_hash,check_point
 from process.convert import bd2gcj
 from process.models import App_Incidence
 from Police_Index_Framework.settings import BASE_DIR
-from process.import_data import MAXINT
 from process.baidumap import BaiduMap
 from celery import task
-
+MAXINT = 999999999
 #目前数据库中的所有大队id列表
 group_ids = [item.group for item in Region_Boundary.objects.all()]
 group_shortnames = [item.group_short_name for item in Dadui_ID.objects.all()]
@@ -47,6 +46,20 @@ def get_peroidic_data():
     get_violation(dt_start, dt_end)
     get_crowd_index()
 
+def generate_all_dadui_crowd_index(dt_start,dt_end):
+    for region_no in dadui_regions:
+        print "create region_no %d" % region_no
+        region_boundaries = Region_Boundary.objects.filter(region=region_no)
+        crowd_indexs = Crowd_Index.objects.filter(region=region_no, create_time__range=[dt_start, dt_end])
+        for region_boundary in region_boundaries:
+            #大队编号
+            group_id = region_boundary.group
+            print "create group_id of %d" % group_id
+            for idx, crowd_index in enumerate(crowd_indexs):
+                crowd_index_new = Crowd_Index(region=region_no, group=group_id, bussiness_area="", avg_car_speed=crowd_index.avg_car_speed, crowd_index=crowd_index.crowd_index, create_time=crowd_index.create_time, freespeed=crowd_index.freespeed, group_name=region_boundary.group_name, number= idx+1)
+                crowd_index_new.save()
+                if idx % 10000 ==0:
+                    print "group: %d now handles %d lines" % (group_id, idx)
 def update_dadui_regions():
     global dadui_regions
     dadui_regions = list(set([item_ddr.region_122_id for item_ddr in Dadui_ID.objects.filter(group_gaode_id__gt=-1)]))

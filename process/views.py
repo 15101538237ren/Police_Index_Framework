@@ -16,8 +16,8 @@ from process.api import *
 duration = 10
 #大队边界可视化
 def dadui_visualize(request):
-    dt_start = datetime.datetime(2017,1,1,0,0,0,0)
-    # dt_end = datetime.datetime(2016,5,4,20,0,0,0)
+    # dt_start = datetime.datetime(2017,1,1,0,0,0,0)
+    dt_start = datetime.datetime(2016,5,4,0,0,0,0)
     # dt_start = datetime.datetime(2017,1,1,0,0,0,0)
     dt_end = datetime.datetime(2017,3,1,0,0,0,0)
     # getRealTimePoliceIndex(request)
@@ -25,7 +25,11 @@ def dadui_visualize(request):
     # get_crowd_index()
     # reload_dadui_boundary()
     # label_all_dadui_id_of_db(dt_start,dt_end)
-    get_peroidic_data()
+    # get_peroidic_data()
+    # generate_all_dadui_crowd_index(dt_start,dt_end)
+    input_crowd_file_path = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2016_crowd.xlsx"
+
+    import_crowd_data(input_crowd_file_path=input_crowd_file_path)
     return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
 def index(request):
     year = 2017

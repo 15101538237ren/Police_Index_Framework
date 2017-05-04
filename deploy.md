@@ -156,7 +156,7 @@ python setup.py install
 
 yum -y install gcc-c++ lapack-devel libicu-devel texinfo-tex
 
-pip install django==1.8.4 django-bootstrap3 django-permanent plotly numpy scipy xlrd
+pip install django==1.8.4 django-bootstrap3 django-permanent plotly numpy scipy xlrd simplejson django-celery django_crontab
 
 service mysqld start
 

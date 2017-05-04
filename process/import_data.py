@@ -5,6 +5,7 @@ from process.helpers import pinyin_hash,check_point,region_hash2
 from process.baidumap import BaiduMap
 from process.convert import bd2gcj
 from Police_Index_Framework.settings import roadset
+from crontab_jobs import dadui_regions
 import MySQLdb
 district_row_no = {"dongcheng":3, "xicheng":4, "chaoyang":5, "haidian":6,"fengtai":7,"shijingshan":8,"daxing":19}
 sheet_idx = {2:"dongcheng",3:"xicheng",4:"haidian",5:"chaoyang",6:"daxing",7:"shijingshan",8:"fengtai"}
@@ -272,15 +273,15 @@ def import_police_data(input_police_file_path , year , month, date_start_day=1):
 #input_file_path: 输入文件xls的路径(不含中文)
 def import_crowd_data(input_crowd_file_path):
     get_excel_index()
-
+    print "in crowd data"
+    # return  0
     file = xlrd.open_workbook(input_crowd_file_path)
     file_sheets = file.sheets()
-    for idx in range(1,len(file_sheets)):
-
+    for idx in range(2,len(file_sheets)):
+        print "idx = %d " % idx
         file_sheet = file.sheets()[idx]
         nrows = file_sheet.nrows
         ncols = file_sheet.ncols
-
         if idx == 1:
             REGION_INDEX = 'A'
             TIME_INDEX = 'C'
@@ -292,22 +293,26 @@ def import_crowd_data(input_crowd_file_path):
             CROWD_INDEX = 'C'
             AVE_SPEED_INDEX = 'D'
         for i in range(1, nrows):
+            if i % 1000 ==0:
+                    print "handled %d lines" % (i)
             region_value = file_sheet.cell(i, excel_dict[REGION_INDEX]).value
             region = region_hash2[region_value]
             create_time_str = file_sheet.cell(i, excel_dict[TIME_INDEX]).value
             avg_car_speed = file_sheet.cell(i, excel_dict[AVE_SPEED_INDEX]).value
             crowd_index = file_sheet.cell(i, excel_dict[CROWD_INDEX]).value
-            if idx == 1:
-                BUSINESS_AREA_INDEX = 'B'
-                business_area = file_sheet.cell(i, excel_dict[BUSINESS_AREA_INDEX]).value
-                create_time = datetime.datetime.strptime(create_time_str, "%Y-%m-%d %H:%M:%S")
-                crowd_index = Crowd_Index(region=region,bussiness_area=business_area,avg_car_speed=avg_car_speed,crowd_index=crowd_index,create_time=create_time,group=0)
-                crowd_index.save()
-            else:
-                create_time = datetime.datetime.strptime(create_time_str, "%Y-%m-%d %H:%M")
-                crowd_index = Crowd_Index(region=region,bussiness_area=None,avg_car_speed=avg_car_speed,crowd_index=crowd_index,create_time=create_time,group=0)
-                crowd_index.save()
-    #print "import crowd data_successful"
+
+            create_time = datetime.datetime.strptime(create_time_str, "%Y-%m-%d %H:%M")
+            if region in dadui_regions:
+                region_boundaries = Region_Boundary.objects.filter(region=region)
+                for idx2,region_boundary in enumerate(region_boundaries):
+                    #大队编号
+                    group_id = region_boundary.group
+                    crowd_index_instance = Crowd_Index(region=region,group=group_id, bussiness_area=None, avg_car_speed=avg_car_speed, crowd_index=crowd_index,create_time=create_time, freespeed=-1, group_name=region_boundary.group_name, number=idx2+1)
+                    crowd_index_instance.save()
+
+            crowd_index_instance = Crowd_Index(region=region,group=0 ,bussiness_area=None, avg_car_speed=avg_car_speed, crowd_index=crowd_index,create_time=create_time, freespeed=-1, group_name="", number=-1)
+            crowd_index_instance.save()
+    print "import crowd data_successful"
 #导入违法数据
 def import_violation_data(input_violation_file):
     get_excel_index()
