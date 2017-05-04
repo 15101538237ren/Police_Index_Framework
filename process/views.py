@@ -36,7 +36,8 @@ def index(request):
     month = 2
     is_region = 1
     week_agg = 0
-
+    #按大队训练和测试
+    is_group = 1
     from_dt = datetime.datetime(year,month,1,0,0,0,0)
     if month !=12:
         end_dt = datetime.datetime(year,month+1,1,0,0,0,0)
@@ -95,7 +96,7 @@ def query_status(request):
         print(ct_time_str)
         datetime_query = datetime.datetime.strptime(ct_time_str, dt_format)
     qt = datetime.datetime(datetime_query.year,datetime_query.month,datetime_query.day,datetime_query.hour,0,0,0)
-    region_pca,_, = OutputRegionIndex(datetime_query, duration=duration)
+    region_pca, _ = OutputRegionIndex(datetime_query, duration=duration)
     region_labels = {}
     for k,v in region_pca.items():
         police_real = Police.objects.filter(create_time=qt,region=int(k))
@@ -115,18 +116,20 @@ def query_status(request):
 def train_region(request):
     if request.method == 'GET':
         is_region = {u"所有区混合训练":0,u"区域分别训练":1}
+        is_group = {u"不训练大队":-1, u"训练大队":1}
         week_agg = week_hash
         return render_to_response('process/train.html', locals(), context_instance=RequestContext(request))
     else:
         is_region = int(request.GET.get("train_region", 0))
         week_agg = int(request.GET.get("week_agg", 0))
         from_date = request.GET.get("date_start", "2017-02-01")
+        is_group = int(request.GET.get("is_group", -1))
         start_time = "0:0:0"
         end_time = "23:59:59"
         end_date = request.GET.get("date_end","2017-02-28")
         start_dt = datetime.datetime.strptime(from_date+" "+start_time, "%Y-%m-%d %H:%M:%S")
         end_dt  = datetime.datetime.strptime(end_date+" "+end_time, "%Y-%m-%d %H:%M:%S")
-        trainRegion(start_time = start_dt, end_time = end_dt, is_region = is_region, is_week= week_agg, duration=duration)
+        trainRegion(start_time = start_dt, end_time = end_dt, is_region = is_region, is_week= week_agg, duration=duration, is_group= is_group)
         ret_dict={}
         return success_response(**ret_dict)
 @require_GET

@@ -6,8 +6,11 @@ import datetime,math,plotly,json
 import numpy as np
 import plotly.graph_objs as go
 from scipy.optimize import leastsq
+from process.crontab_jobs import dadui_regions
 
 PCA_NO = 0
+def get_dadui_count(region_id):
+    return Region_Boundary.objects.filter(region=region_id).count()
 
 ###需要拟合的函数func及误差error###
 def func(p,x):
@@ -73,8 +76,8 @@ def get_date_time_list(start_time,end_time,duration,is_week):
     return datetime_list
 
 #根据datetime_list和是否是综合区构建region_dict
-def get_region_dict(region,datetime_list):
-    if region!=0:
+def get_region_dict(region, datetime_list):
+    if region != 0:
         result_dict = {time:0 for time in datetime_list}   #存储key为datetime,value为举报次数(暂定为所有区域的总次数)
     else:
         result_dict = {}
@@ -95,17 +98,21 @@ def get_region_avg_result(region,datetime_list,**result_dict):
     return result_dict
 #获得星期聚合结果
 def get_week_agg_result(start_time,end_time,duration,region,datetime_list,**result_dict):
+
     week_datetime_list = get_date_time_list(start_time,end_time,duration,1)
+
     #记录星期聚合结果的数据dict
     week_result_dict = {time:0 for time in week_datetime_list}
 
     #记录星期聚合过程中每个时间点被加了几次,最后算平均时除的每个时间点size大小
     size_result_dict = {time:0 for time in week_datetime_list}
+
     if region != 0:
         result_dict_to_handle = result_dict
     else:
         #综合区只取综合结果
         result_dict_to_handle = result_dict['0']
+
     for dt_str in datetime_list:
         #格式化datetime_list 中的字符串为datetime类型
         dt_now = datetime.datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
@@ -113,7 +120,8 @@ def get_week_agg_result(start_time,end_time,duration,region,datetime_list,**resu
         weekday = dt_now.weekday()
         query_str = str(weekday) + " " + time_now
         week_result_dict[query_str] += result_dict_to_handle[dt_str]
-        size_result_dict[query_str] +=1
+        size_result_dict[query_str] += 1
+
     week_real_result = {}
     #迭代一个星期的所有时间
     for week_datetime in week_datetime_list:
@@ -123,12 +131,20 @@ def get_week_agg_result(start_time,end_time,duration,region,datetime_list,**resu
 #
 #region:0——综合区,1~7:区县编号
 #is_week:0——不按周聚合,1——按周聚合
-def preprocess_app_incidence(start_time, end_time, duration, region, is_week):
-    app_incidence = App_Incidence.objects.filter(create_time__range=[start_time, end_time])
-    if region != 0:
-        app_incidence = app_incidence.filter(region=region)
+def preprocess_app_incidence(start_time, end_time, duration, region, is_week, group_id = -1):
+    if group_id == -1:
+        #不按大队训练
+        app_incidence = App_Incidence.objects.filter(create_time__range=[start_time, end_time])
+        if region != 0:
+            app_incidence = app_incidence.filter(region=region)
+    else:
+        #按大队训练
+        app_incidence = App_Incidence.objects.filter(create_time__range=[start_time, end_time], group= group_id)
+
+
     datetime_list = get_date_time_list(start_time,end_time,duration,0)
-    result_dict = get_region_dict(region,datetime_list)
+    #如果是大队,则返回[{日期list:0}....]
+    result_dict = get_region_dict(region, datetime_list)
 
     #循环遍历
     for item in app_incidence:
@@ -138,8 +154,9 @@ def preprocess_app_incidence(start_time, end_time, duration, region, is_week):
             result_dict[ct_time_str] += 1
         else:
             result_dict[str(item.region)][ct_time_str] += 1
-
+    #大队不会执行此步骤
     result_dict = get_region_avg_result(region,datetime_list,**result_dict)
+
     if is_week:
         week_real_result = get_week_agg_result(start_time,end_time,duration,region,datetime_list,**result_dict)
         return week_real_result
@@ -150,12 +167,19 @@ def preprocess_app_incidence(start_time, end_time, duration, region, is_week):
 
 
 #处理违章数据
-def preprocess_violation(start_time, end_time, duration, region, is_week):
-    violation = Violation.objects.filter(create_time__range = [start_time, end_time])
-    if region != 0:
-        violation = violation.filter(region=region)
+def preprocess_violation(start_time, end_time, duration, region, is_week, group_id = -1):
+    if group_id == -1:
+        #不按大队训练
+        violation = Violation.objects.filter(create_time__range = [start_time, end_time])
+
+        if region != 0:
+            violation = violation.filter(region=region)
+    else:
+        #按大队训练
+        violation = Violation.objects.filter(create_time__range = [start_time, end_time], group= group_id)
 
     datetime_list = get_date_time_list(start_time,end_time,duration,0)
+    #如果是大队,则返回[{日期list:0}....]
     result_dict = get_region_dict(region,datetime_list)
 
     #循环遍历
@@ -166,8 +190,9 @@ def preprocess_violation(start_time, end_time, duration, region, is_week):
             result_dict[ct_time_str] += 1
         else:
             result_dict[str(item.region)][ct_time_str] += 1
-
+    #大队不会执行此步骤
     result_dict = get_region_avg_result(region,datetime_list,**result_dict)
+
     if is_week:
         week_real_result = get_week_agg_result(start_time,end_time,duration,region,datetime_list,**result_dict)
         return week_real_result
@@ -177,11 +202,15 @@ def preprocess_violation(start_time, end_time, duration, region, is_week):
         return result_dict['0']
 
 #处理122报警数据
-def preprocess_call_incidence(start_time, end_time, duration, region, is_week):
-    call_incidences = Call_Incidence.objects.filter(create_time__range = [start_time, end_time])
-    if region != 0:
-        call_incidences = call_incidences.filter(region=region)
-
+def preprocess_call_incidence(start_time, end_time, duration, region, is_week, group_id = -1):
+    if group_id == -1:
+        #不按大队训练
+        call_incidences = Call_Incidence.objects.filter(create_time__range = [start_time, end_time])
+        if region != 0:
+            call_incidences = call_incidences.filter(region=region)
+    else:
+        #按大队训练
+        call_incidences = Call_Incidence.objects.filter(create_time__range = [start_time, end_time], group= group_id)
     datetime_list = get_date_time_list(start_time,end_time,duration,0)
     result_dict = get_region_dict(region,datetime_list)
 
@@ -193,7 +222,7 @@ def preprocess_call_incidence(start_time, end_time, duration, region, is_week):
             result_dict[ct_time_str] += 1
         else:
             result_dict[str(item.region)][ct_time_str] += 1
-
+    #大队不会执行此步骤
     result_dict = get_region_avg_result(region,datetime_list,**result_dict)
     if is_week:
         week_real_result = get_week_agg_result(start_time,end_time,duration,region,datetime_list,**result_dict)
@@ -205,10 +234,15 @@ def preprocess_call_incidence(start_time, end_time, duration, region, is_week):
 
 
 #处理拥堵指数数据
-def preprocess_crowd_index(start_time, end_time, duration, region, is_week):
-    crowd_index = Crowd_Index.objects.filter(create_time__range = [start_time, end_time]).filter(bussiness_area=None)
-    if region != 0:
-        crowd_index = crowd_index.filter(region=region)
+def preprocess_crowd_index(start_time, end_time, duration, region, is_week, group_id = -1):
+    if group_id == -1:
+        #不按大队训练
+        crowd_index = Crowd_Index.objects.filter(create_time__range = [start_time, end_time]).filter(bussiness_area=None)
+        if region != 0:
+            crowd_index = crowd_index.filter(region=region)
+    else:
+        #按大队训练
+        crowd_index = Crowd_Index.objects.filter(create_time__range = [start_time, end_time], group= group_id).filter(bussiness_area=None)
 
     datetime_list = get_date_time_list(start_time,end_time,duration,0)
     result_dict = get_region_dict(region,datetime_list)
@@ -232,10 +266,17 @@ def preprocess_crowd_index(start_time, end_time, duration, region, is_week):
 
 
 #处理警力数据
-def preprocess_police(start_time, end_time, duration, region, is_week):
-    polices = Police.objects.filter(create_time__range = [start_time, end_time])
-    if region != 0:
-        polices = polices.filter(region=region).order_by("create_time")
+def preprocess_police(start_time, end_time, duration, region, is_week, group_id = -1):
+    dadui_count = float(get_dadui_count(region))
+    if group_id == -1:
+        #不按大队训练
+        polices = Police.objects.filter(create_time__range = [start_time, end_time])
+        if region != 0:
+            polices = polices.filter(region=region).order_by("create_time")
+    else:
+        ####改回来!!!!!!!!!
+        polices = Police.objects.filter(create_time__range = [start_time, end_time],region=region)
+        # polices = Police.objects.filter(create_time__range = [start_time, end_time], group= group_id)
 
     datetime_list = get_date_time_list(start_time,end_time,duration,0)
     result_dict = get_region_dict(region,datetime_list)
@@ -259,9 +300,12 @@ def preprocess_police(start_time, end_time, duration, region, is_week):
                 val = last_val + j * part_val
                 ct_time_str = format_time(dt, "%Y-%m-%d %H:%M:%S")
                 if region != 0:
-                    result_dict[ct_time_str] =  val
+                    if group_id != -1:
+                        result_dict[ct_time_str] = (val / dadui_count)
+                    else:
+                        result_dict[ct_time_str] =  val
                 else:
-                    result_dict[str(item.region)][ct_time_str] =  val
+                    result_dict[str(item.region)][ct_time_str] = val
             last_dt = now_dt
             last_val = now_val
 
@@ -330,22 +374,25 @@ def pca(data,nRedDim=0,normalise=0):
     y = np.transpose(np.dot(evecs,x)) + m
     return x,y,evals,evecs
 #获取4中类型数据的矩阵,包括预处理,Normalize
-def get_data_array(start_time, end_time, region, is_week, duration=10, is_calc_police = False, is_normalize=1):
+def get_data_array(start_time, end_time, region, is_week, duration=10, is_calc_police = False, is_normalize=1,group_id = -1):
     #以下每个数据都是一个dict,键为datetime
-    app_incidence = preprocess_app_incidence(start_time, end_time, duration, region, is_week)
+    app_incidence = preprocess_app_incidence(start_time, end_time, duration, region, is_week, group_id)
     print("finished get app_incidence data!")
-    violation = preprocess_violation(start_time, end_time, duration, region, is_week)
+    violation = preprocess_violation(start_time, end_time, duration, region, is_week, group_id)
     print("finished get violation data!")
-    call_incidence = preprocess_call_incidence(start_time, end_time, duration, region, is_week)
+    call_incidence = preprocess_call_incidence(start_time, end_time, duration, region, is_week, group_id)
     print("finished get call_incidence data!")
-    crowd_index = preprocess_crowd_index(start_time,end_time,duration,region,is_week)
+    crowd_index = preprocess_crowd_index(start_time,end_time,duration,region,is_week, group_id)
     print("finished get crowd_index data!")
     datetime_list = get_date_time_list(start_time,end_time,duration,is_week)
+
+
     data_arr = [[] for i in range(4)]
+    police_data_arr = []
     if(is_calc_police == True):
-        police_data_arr = []
-        polices = preprocess_police(start_time, end_time, duration, region, is_week)
+        polices = preprocess_police(start_time, end_time, duration, region, is_week, group_id)
         print("finished get polices data!")
+
     for datetime_str in datetime_list:
         if(is_calc_police == True):
             if polices[datetime_str] != 0:
@@ -376,6 +423,8 @@ def get_data_array(start_time, end_time, region, is_week, duration=10, is_calc_p
         row_maxs = 0
         normed_data_array = np_data_array
     print("normalized data successfully!")
+
+    #标准化警力
     if(is_calc_police == True):
         police_data_arr = np.array(police_data_arr)
         polices_max = float(police_data_arr.max())
@@ -386,10 +435,12 @@ def get_data_array(start_time, end_time, region, is_week, duration=10, is_calc_p
 #start_time: 起始时间
 #end_time: 结束时间
 #duration: 时间间隔
-def train(start_time, end_time, region, is_week, duration=10):
+def train(start_time, end_time, region, is_week, duration=10, group_id = -1):
     #获取4种类型数据的矩阵
-    [normed_data_array, row_mins, row_maxs] = get_data_array(start_time, end_time, region, is_week, duration)
+    [normed_data_array, row_mins, row_maxs] = get_data_array(start_time, end_time, region, is_week, duration = duration, is_calc_police=False,is_normalize=1,group_id = group_id)
+
     x,y,evals,evecs = pca(np.transpose(normed_data_array),nRedDim=4,normalise=0)
+
     pca_no = 0
     if all( evecs[:,pca_no] < np.zeros(len(evecs[:,pca_no]))):
         evecs = evecs * -1
@@ -509,6 +560,7 @@ def test_region(evecs, pca_no,start_time, end_time, region, is_week, duration=10
                         zerolinewidth=3,
                     ))
     plotly.offline.plot({"data" : data , "layout" : layout})
+
 ###
 # evecs: 表示特征向量
 # pca_no: 表示主成分的编号
@@ -518,8 +570,8 @@ def test_region(evecs, pca_no,start_time, end_time, region, is_week, duration=10
 # region: 区域编号
 # is_week: 表示是否按照星期聚合
 ###
-def getNormedDataArray(evecs, pca_no, start_time, end_time, duration, region, is_week):
-    [normed_data_array, normed_polices, row_mins, row_maxs] = get_data_array(start_time, end_time, region, is_week, duration=10, is_calc_police=True)
+def getNormedDataArray(evecs, pca_no, start_time, end_time, duration, region, is_week,group_id = -1):
+    [normed_data_array, normed_polices, row_mins, row_maxs] = get_data_array(start_time, end_time, region, is_week, duration=10, is_calc_police=True, is_normalize=1,group_id = group_id)
     if all(evecs[:, pca_no] < np.zeros(len(evecs[:, pca_no]))):
         evecs = evecs * -1
 
@@ -528,24 +580,30 @@ def getNormedDataArray(evecs, pca_no, start_time, end_time, duration, region, is
     #返回第一个主成分的值
     return [transformed_arr[:, 0], normed_polices]
 
-def saveTarinParameter(evecs, row_mins, row_maxs, start_time, end_time, duration, region_id, is_week, create_time):
+def saveTarinParameter(evecs, row_mins, row_maxs, start_time, end_time, duration, region_id, is_week, create_time,group_id = -1):
     PCA_NO = 0
-    [PCA_x, Police_y] = getNormedDataArray(evecs, PCA_NO, start_time, end_time, duration, region_id, is_week)
+    [PCA_x, Police_y] = getNormedDataArray(evecs, PCA_NO, start_time, end_time, duration, region_id, is_week,group_id=group_id)
     # 下面的二维array第二个0表示PCA_num
     app_incidence = evecs[0, PCA_NO]
     violation = evecs[1, PCA_NO]
     call_incidence = evecs[2, PCA_NO]
     crowd_index = evecs[3, PCA_NO]
+
     p0 = [0.6, 0.12]
+
     Para = leastsq(error, p0, args=(PCA_x, Police_y))  # 把error函数中除了p以外的参数打包到args中k2,b2=Para[0]
+
     train_parameter = Train_Parameter(xmin=row_mins[0], xmax=row_maxs[0], ymin=row_mins[1], ymax=row_maxs[1],
                                       zmin=row_mins[2], zmax=row_maxs[2], wmin=row_mins[3], wmax=row_maxs[3],
                                       cx=crowd_index, cy=violation, cz=app_incidence, cw=call_incidence,
-                                      a=p0[0], b=p0[1], create_time=create_time, region=region_id)
+                                      a=p0[0], b=p0[1], create_time=create_time, region=region_id, group=group_id)
     train_parameter.save()
-
-def trainRegion(start_time, end_time, is_region, is_week, duration=10):
+#is_group : 是否按照大队分别训练
+def trainRegion(start_time, end_time, is_region, is_week, duration=10, is_group = -1):
+    if is_group != -1:
+        is_region = 1
     create_time = datetime.datetime.now()
+
     if(is_region == 0):
         region_id = 0
         [evecs, row_mins, row_maxs] = train(start_time, end_time, region_id, is_week, duration)
@@ -553,11 +611,28 @@ def trainRegion(start_time, end_time, is_region, is_week, duration=10):
             region_id_tmp = pinyin_hash[key]
             saveTarinParameter(evecs, row_mins, row_maxs, start_time, end_time, duration, region_id_tmp, is_week, create_time)
     else:
-        for key in pinyin_hash.keys():
-            region_id = pinyin_hash[key]
-            [evecs, row_mins, row_maxs] = train(start_time, end_time, region_id, is_week, duration)
-            saveTarinParameter(evecs, row_mins, row_maxs, start_time, end_time, duration, region_id, is_week,
-                               create_time)
+        if is_group == -1:
+            for key in pinyin_hash.keys():
+                region_id = pinyin_hash[key]
+                [evecs, row_mins, row_maxs] = train(start_time, end_time, region_id, is_week, duration)
+                saveTarinParameter(evecs, row_mins, row_maxs, start_time, end_time, duration, region_id, is_week,
+                                   create_time)
+        else:
+             for region_id in dadui_regions:
+                #区下的所有大队
+                region_boundaries = Region_Boundary.objects.filter(region=region_id)
+                for region_boundary in region_boundaries:
+                    #某个大队
+                    group_id = region_boundary.group
+
+                    print "now training group: %d" % group_id
+                    [evecs, row_mins, row_maxs] = train(start_time, end_time, region_id, is_week, duration, group_id)
+
+                    saveTarinParameter(evecs, row_mins, row_maxs, start_time, end_time, duration, region_id, is_week,
+                                   create_time,group_id = group_id)
+
+
+
 ##
 #按照时间点来查询
 #query_time: 驶入的查询时间点，datetime类型
@@ -604,6 +679,7 @@ def OutputRegionIndex(query_time, duration=10):
         region_pca_xyzw[str(region_id)] = [PCA_x, PCA_y, PCA_z, PCA_w]
     print(region_pca)
     return region_pca, region_pca_xyzw
+
 def test_region_for_timelists(datetime_list,region_id,duration = 10):
     train_parameter = Train_Parameter.objects.order_by('-create_time')[0]  #获取最新的Train_Parameter
     Index_range = 3

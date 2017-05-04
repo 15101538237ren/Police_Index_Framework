@@ -2,7 +2,11 @@
 {% load static from staticfiles %}
 {% block title %}主页{% endblock %}
 {% block head %}
-<script type="text/javascript" src="{% static "js/data.js" %}"></script>
+{% ifequal is_group 1 %}
+    <script type="text/javascript" src="{% static "js/dadui_data.js" %}"></script>
+{% else %}
+    <script type="text/javascript" src="{% static "js/data.js" %}"></script>
+{% endifequal %}
     <script>
 
         var gradient = new gradientColor('#00FF00','#FF0000',300);

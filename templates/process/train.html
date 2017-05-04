@@ -23,12 +23,13 @@
             },
         });
         var train_region = $("#region_select").find("option:selected").val();
+        var is_group = t$("#group_select").find("option:selected").val();
         var week_agg = $("#week_select").find("option:selected").val();
         var date_start = $("#date_start").val();
         var date_end = $("#date_end").val();
         $.ajax({
             type: "POST",
-            url: "{% url 'process:train_region' %}?train_region="+train_region+"&week_agg="+week_agg+"&date_start="+date_start+"&date_end="+date_end,
+            url: "{% url 'process:train_region' %}?is_group="+is_group+"&train_region="+train_region+"&week_agg="+week_agg+"&date_start="+date_start+"&date_end="+date_end,
             success: function (result) {
                 if (result["code"] == 0) {
                     var jc = $.confirm({
@@ -77,6 +78,18 @@
                     <label for="train_region" class="control-label"><small>训练方式:</small></label>
                     <select id="region_select" class="form-control input-sm" name="train_region" style="width:140px;">
                           {% for k,v in is_region.items %}
+                              {% ifequal forloop.counter0 0 %}
+                                  <option value="{{ v }}" selected="selected">{{ k }}</option>
+                              {% else %}
+                                   <option value="{{ v }}">{{ k }}</option>
+                              {% endifequal %}
+                          {% endfor %}
+                    </select>
+               </div>&nbsp;
+               <div class="form-group">
+                    <label for="is_group" class="control-label"><small>是否训练大队:</small></label>
+                    <select id="group_select" class="form-control input-sm" name="is_group" style="width:140px;">
+                          {% for k,v in is_group.items %}
                               {% ifequal forloop.counter0 0 %}
                                   <option value="{{ v }}" selected="selected">{{ k }}</option>
                               {% else %}

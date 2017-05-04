@@ -22,8 +22,8 @@ zhongche_port = 3306
 violation_db_name = 'mobile_bjjj'
 
 table_name_of_violation = 'breach_traffic_rules'
-table_name_of_122 = "weizhi"
 table_name_of_app_incidences ="ig_task_info"
+table_name_of_122 = "weizhi"
 
 dadui_boundary_pkl_path = BASE_DIR + os.sep + "data" + os.sep + "dadui_boundary.pkl"
 dadui_boundary_pklfile = open(dadui_boundary_pkl_path,"rb")
