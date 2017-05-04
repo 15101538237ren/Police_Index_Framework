@@ -9,6 +9,7 @@ from process.models import App_Incidence
 from Police_Index_Framework.settings import BASE_DIR
 from process.import_data import MAXINT
 from process.baidumap import BaiduMap
+from celery import task
 
 #目前数据库中的所有大队id列表
 group_ids = [item.group for item in Region_Boundary.objects.all()]
@@ -19,7 +20,9 @@ zhongche_username = ''
 zhongche_pwd = ''
 zhongche_app_accidence_db_name = ''
 zhongche_port = 3306
+violation_db_name = 'mobile_bjjj'
 
+table_name_of_violation = 'breach_traffic_rules'
 table_name_of_122 = "weizhi"
 table_name_of_app_incidences ="ig_task_info"
 
@@ -29,6 +32,20 @@ dadui_boundaries = pickle.load(dadui_boundary_pklfile)
 dadui_boundary_pklfile.close()
 
 dadui_regions = list(set([item_ddr.region_122_id for item_ddr in Dadui_ID.objects.filter(group_gaode_id__gt=-1)]))
+
+@task()
+def get_peroidic_data():
+    dt = datetime.datetime.now()
+    now_minute = int(dt.minute / 10) * 10
+    dt_end = datetime.datetime(dt.year,dt.month,dt.day,dt.hour,now_minute,0,0)
+    dt_start = dt_end - datetime.timedelta(minutes=10)
+    output_file = open(BASE_DIR + os.sep + "data" + os.sep +"tasks.txt", "a")
+    output_file.write(datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S") + "\n")
+    output_file.close()
+    get_app_incidence(dt_start, dt_end)
+    get_call_incidence(dt_start, dt_end)
+    get_violation(dt_start, dt_end)
+    get_crowd_index()
 
 def update_dadui_regions():
     global dadui_regions
@@ -123,7 +140,7 @@ def judge_region(lng, lat):
 #将所有表格(除了拥堵指数表)label 大队id
 def label_all_dadui_id_of_db(dt_start,dt_end):
     app_incidences = App_Incidence.objects.filter(create_time__range=[dt_start,dt_end])
-    print "len app_incidences %d" % len(app_incidences)
+    print ("len app_incidences %d" % len(app_incidences))
     lbl_cnt = 0
     for idx,app_incidence in enumerate(app_incidences):
         lng = float(app_incidence.longitude)
@@ -196,6 +213,7 @@ def label_all_dadui_id_of_db(dt_start,dt_end):
                     break
         if idx % 10000 == 0:
                 print "imported %d call_incidences, labeled %d " % (idx, lbl_cnt)
+
 #定时获取中车的app事故数据,并存储到数据库
 def get_app_incidence(dt_start,dt_end):
     try:
@@ -270,6 +288,39 @@ def get_call_incidence(dt_start,dt_end):
         conn.close()
     except MySQLdb.Error,e:
          print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+
+#定时获取中车的违法举报数据,并存储到数据库
+def get_violation(dt_start,dt_end):
+    try:
+        conn=MySQLdb.connect(host=zhongche_host,user=zhongche_username,passwd=zhongche_username,db=violation_db_name,port=zhongche_port)
+        cur=conn.cursor()
+        cur.execute("select lng, lat, create_time from " + table_name_of_violation + " where create_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and create_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
+
+        result = cur.fetchall()
+
+        print "len violation results %d" % len(result)
+        for idx,(lng, lat, create_time) in enumerate(result):
+            lng = float(lng)
+            lat = float(lat)
+            #先用百度的边界查询在哪个区
+            region = judge_region(lng=lng, lat= lat)
+
+            #转换成高德坐标再存
+            point = [lng, lat]
+            lng,lat = bd2gcj(point)
+
+            # 查询在哪个大队
+            group = judge_group(lng=lng, lat= lat)
+
+            violation = Violation(longitude=lng, latitude=lat, create_time=create_time, region=region, group = group, breach_type= -1)
+            violation.save()
+
+            print "imported %d violations" % idx
+        cur.close()
+        conn.close()
+    except MySQLdb.Error,e:
+         print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+
 #定时获取高德拥堵指数,存入数据库
 def get_crowd_index():
     real_index_url = 'https://tp-restapi.amap.com/gate?sid=30010&reqData={%22city%22:%22110000%22,%22dateType%22:0,%22userdefined%22:%22true%22}&serviceKey=2F77255FF77D948DF3FED20E0C19B14F'

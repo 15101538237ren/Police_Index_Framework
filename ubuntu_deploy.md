@@ -17,7 +17,7 @@ python setup.py install
 sudo apt-get install Python-scipy python-numpy python-matplotlib
 
 4.
-pip install django==1.8.4 django-bootstrap3 django-permanent plotly xlrd
+pip install django==1.8.4 django-bootstrap3 django-permanent plotly xlrd simplejson django-celery django_crontab
 
 5.
 sudo service mysql start

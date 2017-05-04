@@ -40,6 +40,10 @@ CELERYBEAT_SCHEDULE = {
         'task': 'process.tasks.scheduled_jobs',
         'schedule': crontab(minute='*/1'),
     },
+    'exe-every-10-minute': {
+    'task': 'process.contab_jobs.get_peroidic_data',
+    'schedule': crontab(minute='*/1'),
+    },
 }
 
 
