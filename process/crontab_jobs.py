@@ -8,6 +8,7 @@ from process.convert import bd2gcj
 from process.models import App_Incidence
 from Police_Index_Framework.settings import BASE_DIR
 from process.import_data import MAXINT
+from process.baidumap import BaiduMap
 
 #目前数据库中的所有大队id列表
 group_ids = [item.group for item in Region_Boundary.objects.all()]
@@ -18,6 +19,9 @@ zhongche_username = ''
 zhongche_pwd = ''
 zhongche_app_accidence_db_name = ''
 zhongche_port = 3306
+
+table_name_of_122 = "weizhi"
+table_name_of_app_incidences ="ig_task_info"
 
 dadui_boundary_pkl_path = BASE_DIR + os.sep + "data" + os.sep + "dadui_boundary.pkl"
 dadui_boundary_pklfile = open(dadui_boundary_pkl_path,"rb")
@@ -88,6 +92,34 @@ def reload_dadui_boundary():
     outpkl_file.close()
     return dadui_boundaries_rtn
 
+#判断大队编号
+def judge_group(lng, lat):
+    group = -1
+    for dadui_boundary in dadui_boundaries:
+        flag_dadui = False
+        for boundary_item in dadui_boundary:
+            if (not (boundary_item['minX'] <= lng and lng <= boundary_item['maxX'] and boundary_item['minY'] <=lat and lat <= boundary_item['maxY'])):
+                continue
+            flag_dadui = check_point(boundary_item["data"],lng,lat)
+            if flag_dadui:
+                group = boundary_item["group"]
+                break
+        if flag_dadui:
+            break
+    return group
+#判断区县编号
+def judge_region(lng, lat):
+    region = -1
+    for j in range(len(roadset)):
+        if roadset[j]["name"] in pinyin_hash.keys():
+            if (not (roadset[j]['minX'] <= lng and lng <= roadset[j]['maxX'] and roadset[j]['minY'] <=lat and lat <= roadset[j]['maxY'])):
+                continue
+            data_set = roadset[j]["data"]
+            flag = check_point(data_set,lng,lat)
+            if flag:
+                region = pinyin_hash[roadset[j]["name"]]
+                return region
+    return region
 def label_all_dadui_id_of_db(dt_start,dt_end):
     app_incidences = App_Incidence.objects.filter(create_time__range=[dt_start,dt_end])
     print "len app_incidences %d" % len(app_incidences)
@@ -163,12 +195,12 @@ def label_all_dadui_id_of_db(dt_start,dt_end):
                     break
         if idx % 10000 == 0:
                 print "imported %d call_incidences, labeled %d " % (idx, lbl_cnt)
-#定时获取中车的app事故数据
+#定时获取中车的app事故数据,并存储到数据库
 def get_app_incidence(dt_start,dt_end):
     try:
         conn=MySQLdb.connect(host=zhongche_host,user=zhongche_username,passwd=zhongche_username,db=zhongche_app_accidence_db_name,port=zhongche_port)
         cur=conn.cursor()
-        cur.execute("select longitude, latitude, latlng_address, create_time from ig_task_info where proof_finish = '1' and create_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and create_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
+        cur.execute("select longitude, latitude, latlng_address, create_time from " + table_name_of_app_incidences + " where proof_finish = '1' and create_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and create_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
 
         result = cur.fetchall()
 
@@ -177,40 +209,66 @@ def get_app_incidence(dt_start,dt_end):
             lng = float(lng)
             lat = float(lat)
             #先用百度的边界查询在哪个区
-            for j in range(len(roadset)):
-                if roadset[j]["name"] in pinyin_hash.keys():
-                    if (not (roadset[j]['minX'] <= lng and lng <= roadset[j]['maxX'] and roadset[j]['minY'] <=lat and lat <= roadset[j]['maxY'])):
-                        continue
-                    data_set = roadset[j]["data"]
-                    flag = check_point(data_set,lng,lat)
-                    if flag:
-                        region = pinyin_hash[roadset[j]["name"]]
-                        point = [lng, lat]
-                        lng,lat = bd2gcj(point)
-                        #转换成高德坐标再存
+            region = judge_region(lng=lng, lat= lat)
 
-                        #查询经纬度对应的大队id
-                        group = -1
-                        if region in dadui_regions:
-                            for dadui_boundary in dadui_boundaries:
-                                flag_dadui = False
-                                for boundary_item in dadui_boundary:
-                                    if (not (boundary_item['minX'] <= lng and lng <= boundary_item['maxX'] and boundary_item['minY'] <=lat and lat <= boundary_item['maxY'])):
-                                        continue
-                                    flag_dadui = check_point(boundary_item["data"],lng,lat)
-                                    if flag_dadui:
-                                        group = boundary_item["group"]
-                                        break
-                                if flag_dadui:
-                                    break
-                        app_incidence = App_Incidence(longitude=lng, latitude=lat, place=address, create_time=create_time, region=region, group = group)
-                        app_incidence.save()
+            #转换成高德坐标再存
+            point = [lng, lat]
+            lng,lat = bd2gcj(point)
+
+            # 查询在哪个大队
+            group = judge_group(lng=lng, lat= lat)
+
+            app_incidence = App_Incidence(longitude=lng, latitude=lat, place=address, create_time=create_time, region=region, group = group)
+            app_incidence.save()
+
             print "imported %d app_incidences" % idx
         cur.close()
         conn.close()
     except MySQLdb.Error,e:
          print "Mysql Error %d: %s" % (e.args[0], e.args[1])
 
+#定时获取122事故数据,并存储到数据库
+def get_call_incidence(dt_start,dt_end):
+    try:
+        conn=MySQLdb.connect(host=zhongche_host,user=zhongche_username,passwd=zhongche_username,db=zhongche_app_accidence_db_name,port=zhongche_port)
+        cur=conn.cursor()
+        cur.execute("select call_time, event_content, place from "+table_name_of_122+" where call_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and call_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
+
+        result = cur.fetchall()
+
+        print "len call incidences results %d" % len(result)
+        for idx,(call_time, event_content, place) in enumerate(result):
+            bdmap = BaiduMap("北京市")
+            try:
+                bd_point = bdmap.getLocation(place)
+                if bd_point is None:
+                    continue
+                # 地点名称,经度,纬度,可信度
+                # rtd_gps_info = (place, bd_point[0], bd_point[1], bd_point[2])
+                # print "%s\t%s\t%s\t%s" % (place, bd_point[0], bd_point[1], bd_point[2])
+                #可信度小于50%丢弃
+                if bd_point[2] <= 50:
+                    continue
+                lng = float(bd_point[0])
+                lat = float(bd_point[1])
+                #先用百度的边界查询在哪个区
+                region = judge_region(lng=lng, lat= lat)
+
+                #转换成高德坐标再存
+                point = [lng, lat]
+                lng,lat = bd2gcj(point)
+
+                # 查询在哪个大队
+                group = judge_group(lng=lng, lat= lat)
+                call_incidence = Call_Incidence(longitude=lng, latitude=lat, place=place, create_time=call_time, region=region, group = group, event_content=event_content)
+                call_incidence.save()
+            except Exception as e:
+                print("---bdmap error!! info:" + str(e))
+                continue
+        cur.close()
+        conn.close()
+    except MySQLdb.Error,e:
+         print "Mysql Error %d: %s" % (e.args[0], e.args[1])
 #定时获取高德拥堵指数,存入数据库
 def get_crowd_index():
     real_index_url = 'https://tp-restapi.amap.com/gate?sid=30010&reqData={%22city%22:%22110000%22,%22dateType%22:0,%22userdefined%22:%22true%22}&serviceKey=2F77255FF77D948DF3FED20E0C19B14F'
