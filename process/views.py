@@ -28,16 +28,20 @@ def dadui_visualize(request):
     # get_peroidic_data()
     # generate_all_dadui_crowd_index(dt_start,dt_end)
     input_crowd_file_path = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2016_crowd.xlsx"
-
-    import_crowd_data(input_crowd_file_path=input_crowd_file_path)
+    output_file_path = "/Users/Ren/PycharmProjects/Police_Index_Framework/static/js/data.js"
+    wrt_data_to_js(output_file_path)
+    # generate_datajs_dadui(output_file_path)
+    # import_crowd_data(input_crowd_file_path=input_crowd_file_path)
     return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
 def index(request):
     year = 2017
     month = 2
     is_region = 1
     week_agg = 0
+
     #按大队训练和测试
-    is_group = 1
+    is_group = 0
+
     from_dt = datetime.datetime(year,month,1,0,0,0,0)
     if month !=12:
         end_dt = datetime.datetime(year,month+1,1,0,0,0,0)
@@ -79,7 +83,7 @@ def query_status(request):
 
     year = 2017
     month = 2
-
+    is_group = -1
     from_dt = datetime.datetime(year,month,1,0,0,0,0)
     if month !=12:
         end_dt = datetime.datetime(year,month+1,1,0,0,0,0)
@@ -96,19 +100,23 @@ def query_status(request):
         print(ct_time_str)
         datetime_query = datetime.datetime.strptime(ct_time_str, dt_format)
     qt = datetime.datetime(datetime_query.year,datetime_query.month,datetime_query.day,datetime_query.hour,0,0,0)
-    region_pca, _ = OutputRegionIndex(datetime_query, duration=duration)
+    region_pca, region_pca_xyzw = OutputRegionIndex(datetime_query, duration=duration,is_group=is_group)
     region_labels = {}
     for k,v in region_pca.items():
-        police_real = Police.objects.filter(create_time=qt,region=int(k))
-        # if len(police_real)==0:
-        #     police_real_cnt = -1
-        # else:
+        if is_group > 0:
+            #大队测试
+            police_real = Police.objects.filter(create_time=qt,group=int(k))
+            police_max = Police.objects.filter(create_time__range=[from_dt, end_dt],group=int(k)).aggregate(Max('people_cnt'))["people_cnt__max"]
+            region_or_dadui_name = Region_Boundary.objects.filter(group=int(k))[0].group_name
+        else:
+            police_real = Police.objects.filter(create_time=qt,region=int(k))
+            police_max = Police.objects.filter(create_time__range=[from_dt, end_dt],region=int(k)).aggregate(Max('people_cnt'))["people_cnt__max"]
+            region_or_dadui_name = region_hash_anti[int(k)]
         police_real_cnt = int(police_real[0].people_cnt)
-        police_max = Police.objects.filter(create_time__range=[from_dt, end_dt],region=int(k)).aggregate(Max('people_cnt'))["people_cnt__max"]
-        region_name = region_hash_anti[int(k)]
-        region_index = v
-        people_recommend = int((region_index/300.0)*police_max)
-        label = region_name + u":" + str(region_index/100.0) +u"<br/> 实际警力:"+str(police_real_cnt)+u"<br/>建议警力:"+str(people_recommend)
+        people_recommend = int((v/3.0) * police_max)
+        [PCA_app_accidence, PCA_violation, PCA_call_incidence, PCA_crowd_index] = region_pca_xyzw[k]
+        label = region_or_dadui_name + u":" + str(v) +u"<br/> 实际警力:"+str(police_real_cnt)+u"<br/>建议警力:"+str(people_recommend)+u"<br/>122事故分指数:"+str(PCA_call_incidence)+u"<br/>拥堵延时分指数:"+str(PCA_crowd_index)+u"<br/>APP事故分指数:"+str(PCA_app_accidence)+u"<br/>违法分指数:"+str(PCA_violation)
+        region_pca[k] = int(v * 100)
         region_labels[k]= label
     for k,v in region_labels.items():
         region_pca['r_'+k] = v

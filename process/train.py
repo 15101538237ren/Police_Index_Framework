@@ -637,47 +637,69 @@ def trainRegion(start_time, end_time, is_region, is_week, duration=10, is_group 
 #按照时间点来查询
 #query_time: 驶入的查询时间点，datetime类型
 ##
-def getDataFromeTime(query_time, region, duration=10):
+def getDataFromeTime(query_time, region, duration=10, group_id = -1):
     time_delta = datetime.timedelta(minutes=duration)
     time_delta2 = datetime.timedelta(seconds=1)
     start_time = query_time - time_delta
     end_time = query_time - time_delta2
-    return [start_time, end_time, get_data_array(start_time, end_time, region, is_week=0, duration=duration, is_calc_police=False, is_normalize=0)]
+    return [start_time, end_time, get_data_array(start_time, end_time, region, is_week=0, duration=duration, is_calc_police=False, is_normalize=0,group_id=group_id)]
+#根据数据和训练的参数,获取标准化到0-1的pca分数(PCA_norm)以及各项分指数的值
+def get_pca_norm_and_partial_pca_val(data_array, train_parameter, INDEX_RANGE = 3):
+    normed_data_min_list = [float(train_parameter.xmin), float(train_parameter.ymin), float(train_parameter.zmin), float(train_parameter.wmin)]
+    normed_data_list = [float(train_parameter.xmax - train_parameter.xmin), float(train_parameter.ymax - train_parameter.ymin),
+                        float(train_parameter.zmax - train_parameter.zmin), float(train_parameter.wmax - train_parameter.wmin)]
+    normed_data_min = np.transpose(np.matrix(normed_data_min_list))  ##利用转置变成4*1的矩阵
+    normed_data_range = np.transpose(np.matrix(normed_data_list))
+    normed_data_array = (data_array - normed_data_min)/normed_data_range
+    PCA_NO = 0
+    evecs = [float(train_parameter.cx), float(train_parameter.cy), float(train_parameter.cz), float(train_parameter.cw)]
+    if all(evecs < np.zeros(len(evecs))):
+        evecs = evecs * -1
+    evecs_arr = np.array(evecs)
 
-def OutputRegionIndex(query_time, duration=10):
-    train_parameter = Train_Parameter.objects.order_by('-create_time')[0]  #获取最新的Train_Parameter
-    Index_range = 3
+    transformed_arr = np.matrix(np.transpose(normed_data_array)) * np.transpose(np.matrix(evecs_arr.real))
+    norm_data = np.ones(normed_data_array.shape)
+    norm_transformed_arr = np.matrix(np.transpose(norm_data)) * np.transpose(np.matrix(evecs_arr.real))
+
+    PCA_norm = transformed_arr[0, 0]/norm_transformed_arr[0,0]
+    PCA_norm = round(INDEX_RANGE * PCA_norm, 4)
+
+    PCA_x = round(INDEX_RANGE *((normed_data_array[0] * evecs_arr.real[0])/norm_transformed_arr[0,0]), 4)
+    PCA_y = round(INDEX_RANGE *((normed_data_array[1] * evecs_arr.real[1])/norm_transformed_arr[0,0]), 4)
+    PCA_z = round(INDEX_RANGE *((normed_data_array[2] * evecs_arr.real[2])/norm_transformed_arr[0,0]), 4)
+    PCA_w = round(INDEX_RANGE *((normed_data_array[3] * evecs_arr.real[3])/norm_transformed_arr[0,0]), 4)
+    return PCA_norm, [PCA_x, PCA_y, PCA_z, PCA_w]
+#根据查询的时刻以及duration获取前10分钟的指数情况,is_group指示是否按大队查询
+def OutputRegionIndex(query_time, duration=10,is_group=-1):
+    INDEX_RANGE = 3
     region_pca = {}
     region_pca_xyzw = {}
-    for key in pinyin_hash.keys():
-        region_id = pinyin_hash[key]
-        ##这里调用数据的时候不做normalize
-        [start_time, end_time, result_data] = getDataFromeTime(query_time, region_id, duration=duration)
-        data_array = result_data[0]  ##表示原始4种数据, 4*1的矩阵
-        normed_data_min_list = [float(train_parameter.xmin), float(train_parameter.ymin), float(train_parameter.zmin), float(train_parameter.wmin)]
-        normed_data_list = [float(train_parameter.xmax - train_parameter.xmin), float(train_parameter.ymax - train_parameter.ymin),
-                            float(train_parameter.zmax - train_parameter.zmin), float(train_parameter.wmax - train_parameter.wmin)]
-        normed_data_min = np.transpose(np.matrix(normed_data_min_list))  ##利用转置变成4*1的矩阵
-        normed_data_range = np.transpose(np.matrix(normed_data_list))
-        normed_data_array = (data_array - normed_data_min)/normed_data_range
-        PCA_NO = 0
-        evecs = [float(train_parameter.cx), float(train_parameter.cy), float(train_parameter.cz), float(train_parameter.cw)]
-        if all(evecs < np.zeros(len(evecs))):
-            evecs = evecs * -1
-        evecs_arr = np.array(evecs)
-
-        transformed_arr = np.matrix(np.transpose(normed_data_array)) * np.transpose(np.matrix(evecs_arr.real))
-        norm_data = np.ones(normed_data_array.shape)
-        norm_transformed_arr = np.matrix(np.transpose(norm_data)) * np.transpose(np.matrix(evecs_arr.real))
-
-        PCA_norm = transformed_arr[0, 0]/norm_transformed_arr[0,0]
-        PCA_x = normed_data_array[0] * evecs_arr.real[0]
-        PCA_y = normed_data_array[1] * evecs_arr.real[1]
-        PCA_z = normed_data_array[2] * evecs_arr.real[2]
-        PCA_w = normed_data_array[3] * evecs_arr.real[3]
-        region_pca[str(region_id)] = int(round(Index_range * PCA_norm,2)*100)
-        region_pca_xyzw[str(region_id)] = [PCA_x, PCA_y, PCA_z, PCA_w]
-    print(region_pca)
+    if is_group == -1:
+        for key in pinyin_hash.keys():
+            region_id = pinyin_hash[key]
+            ##这里调用数据的时候不做normalize
+            [start_time, end_time, result_data] = getDataFromeTime(query_time, region_id, duration=duration,group_id=-1)
+            data_array = result_data[0]  ##表示原始4种数据, 4*1的矩阵
+            train_parameter = Train_Parameter.objects.filter(region=region_id).order_by('-create_time')[0] #获取最新的Train_Parameter
+            PCA_norm, split_pca_vals = get_pca_norm_and_partial_pca_val(data_array, train_parameter, INDEX_RANGE=INDEX_RANGE)
+            #返回0-3范围的指数
+            region_pca[str(region_id)] = PCA_norm
+            region_pca_xyzw[str(region_id)] = split_pca_vals
+    else:
+        for region_id in dadui_regions:
+            print "testing region_id %d" % region_id
+            region_boundaries = Region_Boundary.objects.filter(region=region_id)
+            for region_boundary in region_boundaries:
+                #大队编号
+                group_id = region_boundary.group
+                print "testing group_id %d" % group_id
+                [start_time, end_time, result_data] = getDataFromeTime(query_time, region_id, duration=duration,group_id=group_id)
+                data_array = result_data[0]  ##表示原始4种数据, 4*1的矩阵
+                train_parameter = Train_Parameter.objects.filter(group=group_id).order_by('-create_time')[0] #获取最新的Train_Parameter
+                PCA_norm, split_pca_vals = get_pca_norm_and_partial_pca_val(data_array, train_parameter, INDEX_RANGE=INDEX_RANGE)
+                #返回0-3范围的指数
+                region_pca[str(group_id)] = PCA_norm
+                region_pca_xyzw[str(group_id)] = split_pca_vals
     return region_pca, region_pca_xyzw
 
 def test_region_for_timelists(datetime_list,region_id,duration = 10):

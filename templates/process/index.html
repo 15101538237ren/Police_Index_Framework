@@ -41,7 +41,7 @@
                 dataType: "json",
                 beforeSend: function (xhr, settings) {
                     xhr.setRequestHeader("X-CSRFToken", '{{ csrf_token }}');
-                },
+                }
             });
 
             $.ajax({
@@ -106,27 +106,41 @@
     {
         map.clearOverlays();
 
-        for ( var region_id in data ){
-        var points = [];  // 添加海量点数据
+        for (var region_id in data ){
 
-        for (var i = 0; i < data[region_id].length; i++) {
-                points.push(new BMap.Point(data[region_id][i][0], data[region_id][i][1]));
+
+            for (var i = 0; i < data[region_id].length; i++) {
+                var points = [];  // 添加海量点数据
+                for (var j = 0; j < data[region_id][i].length; j++) {
+                    points.push(new BMap.Point(data[region_id][i][j][0], data[region_id][i][j][1]));
+                }
+
+                var geo_center_point = new BMap.Point(geocenter[region_id][i][0], geocenter[region_id][i][1]);
+                var marker = new BMap.Marker(geo_center_point);  // 创建标注
+                map.addOverlay(marker);              // 将标注添加到地图中
+
+                var label = new BMap.Label(get_region_label(region_id), {
+                    position: geo_center_point,
+                    offset: new BMap.Size(20, -10)
+                });
+
+                label.setStyle({
+                    color: "white",
+                    fontSize: "12px",
+                    border: "0",
+                    backgroundColor: "0.0"
+                });
+
+                marker.setLabel(label);
+                var polygon = new BMap.Polygon(points, {
+                    strokeColor: "#FFFFFF",
+                    fillColor: gradient[get_region_color(region_id)],
+                    strokeWeight: 1,
+                    strokeOpacity: 0.5
+                });  // 初始化PointCollection
+                map.addOverlay(polygon);
+            }
         }
-        var geo_center_point = new BMap.Point(geocenter[region_id][0],geocenter[region_id][1]);
-        var marker = new BMap.Marker(geo_center_point);  // 创建标注
-	    map.addOverlay(marker);              // 将标注添加到地图中
-
-        var label = new BMap.Label(get_region_label(region_id),{position :geo_center_point,offset   : new BMap.Size(20, -10)});
-        label.setStyle({
-			 color : "white",
-			 fontSize : "12px",
-             border :"0",
-             backgroundColor :"0.0"
-		 });
-        marker.setLabel(label);
-        var polygon = new BMap.Polygon(points, { strokeColor:"#FFFFFF",fillColor:gradient[get_region_color(region_id)], strokeWeight:1, strokeOpacity:0.5});  // 初始化PointCollection
-        map.addOverlay(polygon);
-    }
     }
     var $slider3 = $("#slider3");
 
