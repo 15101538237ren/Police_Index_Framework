@@ -18,12 +18,15 @@ duration = 10
 def dadui_visualize(request):
     dt_start = datetime.datetime(2016,5,4,0,0,0,0)
     # dt_end = datetime.datetime(2016,5,4,20,0,0,0)
-    dt_end = datetime.datetime(2017,1,1,0,0,0,0)
+    # dt_start = datetime.datetime(2017,1,1,0,0,0,0)
+    dt_end = datetime.datetime(2017,3,1,0,0,0,0)
 
 
     # getRealTimePoliceIndex(request)
     # import_violation_data_from_db(dt_start,dt_end)
     # get_crowd_index()
+    # reload_dadui_boundary()
+    label_all_dadui_id_of_db(dt_start,dt_end)
     return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
 def index(request):
     year = 2017

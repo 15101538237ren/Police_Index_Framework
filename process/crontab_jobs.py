@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 import os,datetime
 from process.models import *
-import urllib,urllib2,json,MySQLdb
+import urllib,urllib2,json,MySQLdb,pickle
 from Police_Index_Framework.settings import roadset
 from process.helpers import pinyin_hash,check_point
 from process.convert import bd2gcj
 from process.models import App_Incidence
+from Police_Index_Framework.settings import BASE_DIR
+from process.import_data import MAXINT
 
 #目前数据库中的所有大队id列表
 group_ids = [item.group for item in Region_Boundary.objects.all()]
@@ -17,6 +19,147 @@ zhongche_pwd = ''
 zhongche_app_accidence_db_name = ''
 zhongche_port = 3306
 
+dadui_boundary_pkl_path = BASE_DIR + os.sep + "data" + os.sep + "dadui_boundary.pkl"
+dadui_boundary_pklfile = open(dadui_boundary_pkl_path,"rb")
+dadui_boundaries = pickle.load(dadui_boundary_pklfile)
+dadui_boundary_pklfile.close()
+
+dadui_regions = list(set([item_ddr.region_122_id for item_ddr in Dadui_ID.objects.filter(group_gaode_id__gt=-1)]))
+
+#重新加载大队边界的数据
+def reload_dadui_boundary():
+    dadui_boundaries_temp = Region_Boundary.objects.all()
+    dadui_boundaries_rtn = []
+    for dadui_boundary in dadui_boundaries_temp:
+        region = dadui_boundary.region
+        dadui_id = dadui_boundary.group
+        dadui_name = dadui_boundary.group_name
+        #区域编号尚未赋值
+        if region == -1:
+            region_id = Dadui_ID.objects.filter(group_gaode_id= dadui_id)
+            if len(region_id) > 0:
+                dadui_boundary.region = region_id[0].region_122_id
+                dadui_boundary.save()
+
+        geo_boundary = json.loads(dadui_boundary.geo_boundary)
+        if len(geo_boundary) > 0:
+            #多个边界区域
+            dadui_boundaries_rtn_i = []
+            if isinstance(geo_boundary[0],list):
+                geo_boundary_list = [item for item in geo_boundary]
+            else:
+                geo_boundary_list = [geo_boundary]
+
+            for gb in geo_boundary_list:
+                boundary_dict = {}
+                maxX = maxY = -MAXINT
+                minX = minY = MAXINT
+                group = dadui_id
+                group_name = dadui_name
+                region = dadui_boundary.region
+                ll_list = []
+                for item in gb:
+                    x = item[u'x']
+                    y = item[u'y']
+                    if x > maxX:
+                        maxX = x
+                    if x < minX:
+                        minX = x
+                    if y > maxY:
+                        maxY = y
+                    if x < minY:
+                        minY = y
+                    ll_list.append([x,y])
+                boundary_dict["maxX"] = maxX
+                boundary_dict["maxY"] = maxY
+                boundary_dict["minX"] = minX
+                boundary_dict["minY"] = minY
+                boundary_dict["group"] = group
+                boundary_dict["group_name"] = group_name
+                boundary_dict["region"] = region
+                boundary_dict["data"] = ll_list
+                dadui_boundaries_rtn_i.append(boundary_dict)
+            dadui_boundaries_rtn.append(dadui_boundaries_rtn_i)
+    outpkl_file = open(dadui_boundary_pkl_path,"wb")
+    pickle.dump(dadui_boundaries_rtn,outpkl_file,-1)
+    outpkl_file.close()
+    return dadui_boundaries_rtn
+
+def label_all_dadui_id_of_db(dt_start,dt_end):
+    app_incidences = App_Incidence.objects.filter(create_time__range=[dt_start,dt_end])
+    print "len app_incidences %d" % len(app_incidences)
+    lbl_cnt = 0
+    for idx,app_incidence in enumerate(app_incidences):
+        lng = float(app_incidence.longitude)
+        lat = float(app_incidence.latitude)
+
+        #查询经纬度对应的大队id
+        if (app_incidence.region in dadui_regions) and (app_incidence.group <= 0):
+            for dadui_boundary in dadui_boundaries:
+                flag_dadui = False
+                for boundary_item in dadui_boundary:
+                    if (not (boundary_item['minX'] <= lng and lng <= boundary_item['maxX'] and boundary_item['minY'] <=lat and lat <= boundary_item['maxY'])):
+                        continue
+                    flag_dadui = check_point(boundary_item["data"],lng,lat)
+                    if flag_dadui:
+                        app_incidence.group = boundary_item["group"]
+                        app_incidence.save()
+                        lbl_cnt += 1
+                        break
+                if flag_dadui:
+                    break
+        if idx % 10000 == 0:
+                print "imported %d app_incidences, labeled %d " % (idx, lbl_cnt)
+
+    violations = Violation.objects.filter(create_time__range=[dt_start,dt_end])
+    print "len violations %d" % len(violations)
+    lbl_cnt = 0
+    for idx,violation in enumerate(violations):
+        lng = float(violation.longitude)
+        lat = float(violation.latitude)
+
+        #查询经纬度对应的大队id
+        if (violation.region in dadui_regions) and (violation.group <= 0):
+            for dadui_boundary in dadui_boundaries:
+                flag_dadui = False
+                for boundary_item in dadui_boundary:
+                    if (not (boundary_item['minX'] <= lng and lng <= boundary_item['maxX'] and boundary_item['minY'] <=lat and lat <= boundary_item['maxY'])):
+                        continue
+                    flag_dadui = check_point(boundary_item["data"],lng,lat)
+                    if flag_dadui:
+                        violation.group = boundary_item["group"]
+                        violation.save()
+                        lbl_cnt += 1
+                        break
+                if flag_dadui:
+                    break
+        if idx % 10000 == 0:
+                print "imported %d violations, labeled %d " % (idx, lbl_cnt)
+
+    call_incidences = Call_Incidence.objects.filter(create_time__range=[dt_start,dt_end])
+    print "len call_incidences %d" % len(call_incidences)
+    lbl_cnt = 0
+    for idx,call_incidence in enumerate(call_incidences):
+        lng = float(call_incidence.longitude)
+        lat = float(call_incidence.latitude)
+
+        #查询经纬度对应的大队id
+        if (call_incidence.region in dadui_regions) and (call_incidence.group <= 0):
+            for dadui_boundary in dadui_boundaries:
+                flag_dadui = False
+                for boundary_item in dadui_boundary:
+                    if (not (boundary_item['minX'] <= lng and lng <= boundary_item['maxX'] and boundary_item['minY'] <=lat and lat <= boundary_item['maxY'])):
+                        continue
+                    flag_dadui = check_point(boundary_item["data"],lng,lat)
+                    if flag_dadui:
+                        call_incidence.group = boundary_item["group"]
+                        call_incidence.save()
+                        lbl_cnt += 1
+                        break
+                if flag_dadui:
+                    break
+        if idx % 10000 == 0:
+                print "imported %d call_incidences, labeled %d " % (idx, lbl_cnt)
 #定时获取中车的app事故数据
 def get_app_incidence(dt_start,dt_end):
     try:
@@ -44,8 +187,15 @@ def get_app_incidence(dt_start,dt_end):
                         #转换成高德坐标再存
 
                         #查询经纬度对应的大队id
-
-                        app_incidence = App_Incidence(longitude=lng, latitude=lat, place=address, create_time=create_time, region=region, group = 0)
+                        group = -1
+                        for dadui_boundary in dadui_boundaries:
+                            for boundary_item in dadui_boundary:
+                                if (not (boundary_item['minX'] <= lng and lng <= boundary_item['maxX'] and boundary_item['minY'] <=lat and lat <= boundary_item['maxY'])):
+                                    continue
+                                flag_dadui = check_point(boundary_item["data"],lng,lat)
+                                if flag_dadui:
+                                    group = boundary_item["group"]
+                        app_incidence = App_Incidence(longitude=lng, latitude=lat, place=address, create_time=create_time, region=region, group = group)
                         app_incidence.save()
             print "imported %d app_incidences" % idx
         cur.close()
@@ -112,10 +262,13 @@ def get_boundary_of(rid, group_name):
                 group_id = result["data"]["id"] if "id" in result["data"].keys() else -1
                 geo_boundary = result["data"]["geo"] if "geo" in result["data"].keys() else ""
                 if group_id!=-1 and geo_boundary != "":
+                    geo_boundary = json.dumps(geo_boundary)
                     region_boundary = Region_Boundary(region=-1, group= group_id,group_name= group_name, geo_boundary=geo_boundary)
                     region_boundary.save()
                     print "id :%d, geo_len: %d" % (group_id, len(geo_boundary))
                 else:
                     succ = 0
                     print "get boundary of %s failed" % rid
+                global dadui_boundaries
+                dadui_boundaries = reload_dadui_boundary()
     return succ
