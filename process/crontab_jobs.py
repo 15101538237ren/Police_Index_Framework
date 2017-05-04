@@ -26,6 +26,9 @@ dadui_boundary_pklfile.close()
 
 dadui_regions = list(set([item_ddr.region_122_id for item_ddr in Dadui_ID.objects.filter(group_gaode_id__gt=-1)]))
 
+def update_dadui_regions():
+    global dadui_regions
+    dadui_regions = list(set([item_ddr.region_122_id for item_ddr in Dadui_ID.objects.filter(group_gaode_id__gt=-1)]))
 #重新加载大队边界的数据
 def reload_dadui_boundary():
     dadui_boundaries_temp = Region_Boundary.objects.all()
@@ -188,13 +191,18 @@ def get_app_incidence(dt_start,dt_end):
 
                         #查询经纬度对应的大队id
                         group = -1
-                        for dadui_boundary in dadui_boundaries:
-                            for boundary_item in dadui_boundary:
-                                if (not (boundary_item['minX'] <= lng and lng <= boundary_item['maxX'] and boundary_item['minY'] <=lat and lat <= boundary_item['maxY'])):
-                                    continue
-                                flag_dadui = check_point(boundary_item["data"],lng,lat)
+                        if region in dadui_regions:
+                            for dadui_boundary in dadui_boundaries:
+                                flag_dadui = False
+                                for boundary_item in dadui_boundary:
+                                    if (not (boundary_item['minX'] <= lng and lng <= boundary_item['maxX'] and boundary_item['minY'] <=lat and lat <= boundary_item['maxY'])):
+                                        continue
+                                    flag_dadui = check_point(boundary_item["data"],lng,lat)
+                                    if flag_dadui:
+                                        group = boundary_item["group"]
+                                        break
                                 if flag_dadui:
-                                    group = boundary_item["group"]
+                                    break
                         app_incidence = App_Incidence(longitude=lng, latitude=lat, place=address, create_time=create_time, region=region, group = group)
                         app_incidence.save()
             print "imported %d app_incidences" % idx
@@ -271,4 +279,5 @@ def get_boundary_of(rid, group_name):
                     print "get boundary of %s failed" % rid
                 global dadui_boundaries
                 dadui_boundaries = reload_dadui_boundary()
+                update_dadui_regions()
     return succ
