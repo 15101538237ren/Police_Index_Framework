@@ -26,7 +26,7 @@ def dadui_visualize(request):
     # import_violation_data_from_db(dt_start,dt_end)
     # get_crowd_index()
     # reload_dadui_boundary()
-    label_all_dadui_id_of_db(dt_start,dt_end)
+    # label_all_dadui_id_of_db(dt_start,dt_end)
     return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
 def index(request):
     year = 2017
