@@ -105,8 +105,8 @@ def query_status(request):
     for k,v in region_pca.items():
         if is_group > 0:
             #大队测试
-            police_real = Police.objects.filter(create_time=qt,group=int(k))
-            police_max = Police.objects.filter(create_time__range=[from_dt, end_dt],group=int(k)).aggregate(Max('people_cnt'))["people_cnt__max"]
+            police_real = 0# Police.objects.filter(create_time=qt,group=int(k))
+            police_max = 0#Police.objects.filter(create_time__range=[from_dt, end_dt],group=int(k)).aggregate(Max('people_cnt'))["people_cnt__max"]
             region_or_dadui_name = Region_Boundary.objects.filter(group=int(k))[0].group_name
         else:
             police_real = Police.objects.filter(create_time=qt,region=int(k))
