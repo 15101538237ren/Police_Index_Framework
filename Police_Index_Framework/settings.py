@@ -41,8 +41,8 @@ CELERYBEAT_SCHEDULE = {
         'schedule': crontab(minute='*/1'),
     },
     'exe-every-10-minute': {
-    'task': 'process.contab_jobs.get_peroidic_data',
-    'schedule': crontab(minute='*/1'),
+    'task': 'process.tasks.get_peroidic_data',
+    'schedule': crontab(minute='*/10'),
     },
 }
 
@@ -123,15 +123,15 @@ WSGI_APPLICATION = 'Police_Index_Framework.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
-LAB = False
+DEPLOY = False
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'police_index',
-        'USER': 'ren' if not LAB else 'police',
-        'PASSWORD': 'harry123' if not LAB else 'police',
-        'HOST': 'localhost' if not LAB else '192.168.3.119',
+        'USER': '' if DEPLOY else 'ren',
+        'PASSWORD': '' if DEPLOY else 'harry123',
+        'HOST': '' if DEPLOY else 'localhost',
         'PORT': '3306',
     }
 }
@@ -178,6 +178,6 @@ DB_122 = {
 #各种表的名称
 TABLE_OF_VIOLATION = 'breach_traffic_rules'
 TABLE_OF_APP_INCIDENCE ="ig_task_info"
-TABLE_OF_APP_122_INCIDENCE = "t_zhzs"
+TABLE_OF_122_INCIDENCE = "t_zhzs"
 REAL_CROWD_URL = 'https://tp-restapi.amap.com/gate?sid=30010&reqData={%22city%22:%22110000%22,%22dateType%22:0,%22userdefined%22:%22true%22}&serviceKey=2F77255FF77D948DF3FED20E0C19B14F'
 

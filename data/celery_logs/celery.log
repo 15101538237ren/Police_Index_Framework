@@ -1,0 +1,12 @@
+[2017-05-05 16:47:34,309: INFO/MainProcess] Connected to django://localhost:8000//
+[2017-05-05 16:47:34,325: WARNING/MainProcess] /Library/Python/2.7/site-packages/celery/fixups/django.py:265: UserWarning:
+
+Using settings.DEBUG leads to a memory leak, never use this setting in production environments!
+
+
+[2017-05-05 16:47:34,325: WARNING/MainProcess] celery@renhongleideMacBook-Pro.local ready.
+[2017-05-05 16:48:04,385: INFO/MainProcess] Received task: process.tasks.get_peroidic_data[a7b4be61-2d6f-44d0-b646-fede161bb59e]
+[2017-05-05 16:48:04,389: INFO/MainProcess] Received task: process.tasks.scheduled_jobs[7cfe2696-490f-4f7a-8da7-7b56075ef4af]
+[2017-05-05 16:48:04,392: WARNING/Worker-2] writing file!
+[2017-05-05 16:48:04,396: INFO/MainProcess] Task process.tasks.get_peroidic_data[a7b4be61-2d6f-44d0-b646-fede161bb59e] succeeded in 0.00900460200501s: None
+[2017-05-05 16:48:04,399: INFO/MainProcess] Task process.tasks.scheduled_jobs[7cfe2696-490f-4f7a-8da7-7b56075ef4af] succeeded in 0.00839499602444s: None

@@ -11,5 +11,6 @@ urlpatterns = patterns('process.views',
  url(r'^download','custom_download',name='custom_download'),
  url(r'^load_region_statistics','load_region_statistics',name='load_region_statistics'),
  url(r'^gate', 'getRealTimePoliceIndex', name='getRealTimePoliceIndex'),
- url(r'^dadui', 'dadui_visualize', name='dadui_visualize')
+ url(r'^dadui', 'dadui_visualize', name='dadui_visualize'),
+ url(r'^init', 'init_db_of_call_incidences', name='init_db_of_call_incidences')
 )

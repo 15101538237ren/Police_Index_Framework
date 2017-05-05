@@ -43,10 +43,13 @@
                     xhr.setRequestHeader("X-CSRFToken", '{{ csrf_token }}');
                 }
             });
-
+            var is_group = -1;
+            {% ifequal is_group 1 %}
+                is_group = 1;
+            {% endifequal %}
             $.ajax({
                 type: "POST",
-                url: "{% url 'process:query_status' %}?query_dt="+dt_now,
+                url: "{% url 'process:query_status' %}?is_group="+is_group+"&query_dt="+dt_now,
                 success: function (result) {
                     if (result["code"] == 0) {
                         for(i=0;i<district_ids.length;i++)
@@ -125,7 +128,7 @@
                 });
 
                 label.setStyle({
-                    color: "white",
+                    color: "black",
                     fontSize: "12px",
                     border: "0",
                     backgroundColor: "0.0"

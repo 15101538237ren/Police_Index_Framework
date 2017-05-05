@@ -2,17 +2,73 @@
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.http import HttpResponse
-from process.train import *
 from process.helpers import read_file,week_hash,ajax_required,success_response
-from import_data import *
-from crontab_jobs import *
-from helpers import region_hash_anti
-import datetime
-from django.db.models import Max
+from process.crontab_jobs import exe_sql_of_custom,get_app_incidence
 from os.path import normpath,join
 from Police_Index_Framework.settings import BASE_DIR,API_KEY
 from django.views.decorators.http import require_GET, require_POST
-from process.api import *
+import os,urllib2,json,datetime,random
+from crontab_jobs import save_prediction_info
+from process.helpers import json_response
+from process.models import Prediction_Info,Police,Region_Boundary
+from Police_Index_Framework.settings import REAL_CROWD_URL,API_KEY
+from process.train import generate_str_arr_from_date_to_date,trainRegion,get_region_index_to_json,format_time,OutputRegionIndex
+from process.helpers import region_hash_anti,region_hash,pinyin_hash
+
+#city: 表示城市
+#order:(bool) 0表示按照指数的名称排序，1表示按照指数的大小排序（从大到小）
+#serviceKey:
+#callback:
+@json_response
+def getRealTimePoliceIndex(request):
+    # save_prediction_info()
+    if request.method =='GET':
+        req_dict = request.GET
+    else:
+        req_dict = request.POST
+
+    apikey = req_dict.get("apikey", "")
+
+    if apikey =="" or apikey != API_KEY:
+        return []
+    req = urllib2.Request(REAL_CROWD_URL)
+    res = urllib2.urlopen(req).read()
+    result = json.loads(res.decode("utf-8"))
+    data_list = []
+    succ = 0
+    dt = datetime.datetime.now()
+    now_minute = int(dt.minute / 10) * 10
+    # datetime_query = datetime.datetime(2017,2,28,8,0,0,0)
+    datetime_query = datetime.datetime(dt.year,dt.month,dt.day,dt.hour,now_minute,0,0)
+
+    if ("status" in result.keys()) and ("data" in result.keys()):
+        if "code" in result["status"]:
+            if result["status"]["code"] == 0:
+                succ = 1
+                for idx, data in enumerate(result["data"]):
+                    id_str = data["id"] if "id" in result["data"][idx].keys() else ""
+                    dadui_id = int(id_str.split("_")[1])
+                    print "dadui id %d " % dadui_id
+                    prediction_infos = Prediction_Info.objects.filter(create_time=datetime_query, group=int(dadui_id))
+                    if len(prediction_infos):
+                        prediction_info = prediction_infos[0]
+                        data["index"] = prediction_info.index
+                        data["violation_index"] = prediction_info.PCAy
+                        data["accidents_index"] = prediction_info.PCAx + prediction_info.PCAz
+                        data["crowd_index"] = prediction_info.PCAw
+                        data["real_police_cnt"] = prediction_info.real_police
+                        data["suggested_police_cnt"] = prediction_info.expect_police
+                        data_list.append(data)
+                    else:
+                        if dadui_id == 10001:
+                            data["index"] = round(random.random() * 3.0, 4)
+                            data["violation_index"] = round(data["index"] / 3.0, 4)
+                            data["accidents_index"] = round(data["index"] / 3.0, 4)
+                            data["crowd_index"] = round(data["index"] / 3.0, 4)
+                            data["real_police_cnt"] = random.randint(50,100)
+                            data["suggested_police_cnt"] = random.randint(50,100)
+                            data_list.append(data)
+    return data_list
 
 def custom_download(request):
     if request.method == 'GET':
@@ -44,11 +100,10 @@ def custom_download(request):
                 errors = filename
                 return render_to_response('process/errors.html', locals(), context_instance=RequestContext(request))
 
-duration = 10
 #大队边界可视化
 def dadui_visualize(request):
     # dt_start = datetime.datetime(2017,1,1,0,0,0,0)
-    dt_start = datetime.datetime(2016,5,4,0,0,0,0)
+    dt_start = datetime.datetime(2017,1,1,0,0,0,0)
     # dt_start = datetime.datetime(2017,1,1,0,0,0,0)
     dt_end = datetime.datetime(2017,3,1,0,0,0,0)
     # getRealTimePoliceIndex(request)
@@ -58,33 +113,41 @@ def dadui_visualize(request):
     # label_all_dadui_id_of_db(dt_start,dt_end)
     # get_peroidic_data()
     # generate_all_dadui_crowd_index(dt_start,dt_end)
-    input_crowd_file_path = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2016_crowd.xlsx"
-    output_file_path = "/Users/Ren/PycharmProjects/Police_Index_Framework/static/js/dadui_data.js"
+    # input_crowd_file_path = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2016_crowd.xlsx"
+    # output_file_path = "/Users/Ren/PycharmProjects/Police_Index_Framework/static/js/dadui_data.js"
     # wrt_data_to_js(output_file_path)
     # generate_datajs_dadui(output_file_path)
     # import_crowd_data(input_crowd_file_path=input_crowd_file_path)
+    return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
+
+def init_db_of_call_incidences(request):
+    dt_start = datetime.datetime(2016,5,4,0,0,0,0)
+    dt_end = datetime.datetime(2017,1,1,0,0,0,0)
+    get_app_incidence(dt_start, dt_end)
     return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
 def index(request):
     year = 2017
     month = 2
     is_region = 1
     week_agg = 0
-
     #按大队训练和测试
-    is_group = 0
+    is_group = 1
 
     from_dt = datetime.datetime(year,month,1,0,0,0,0)
     if month !=12:
         end_dt = datetime.datetime(year,month+1,1,0,0,0,0)
     else:
         end_dt = datetime.datetime(year+1,1,1,0,0,0,0)
-
+    duration = 10
     dt_list = generate_str_arr_from_date_to_date(from_dt, end_dt, duration_minute=duration)
     slider_cnts = len(dt_list)
 
     # trainRegion(start_time = start_dt, end_time = end_dt, is_region = is_region, is_week= week_agg, duration=10)
     query_time = datetime.datetime.strptime("2017-02-10 11:30:00", "%Y-%m-%d %H:%M:%S")
-    district_ids = pinyin_hash.values()
+    if is_group > 0:
+        district_ids = [item.group for item in Region_Boundary.objects.filter(region__gt=0)]
+    else:
+        district_ids = pinyin_hash.values()
     return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
 def realtime_index(request):
 
@@ -100,7 +163,7 @@ def realtime_index(request):
         end_dt = datetime.datetime(year,month+1,1,0,0,0,0)
     else:
         end_dt = datetime.datetime(year+1,1,1,0,0,0,0)
-
+    duration = 10
     dt_list = generate_str_arr_from_date_to_date(from_dt,end_dt,duration_minute=duration)
     slider_cnts = len(dt_list)
 
@@ -114,18 +177,18 @@ def query_status(request):
 
     year = 2017
     month = 2
-    is_group = -1
     from_dt = datetime.datetime(year,month,1,0,0,0,0)
     if month !=12:
         end_dt = datetime.datetime(year,month+1,1,0,0,0,0)
     else:
         end_dt = datetime.datetime(year+1,1,1,0,0,0,0)
-
+    is_group = int(request.GET.get("is_group",-1))
+    print "is_group %d" % is_group
     real_time = int(request.GET.get("realtime",'0'))
     datetime_query = request.GET.get("query_dt","2017-02-01 0:0:0")
     dt_format="%Y-%m-%d %H:%M:%S"
     datetime_query = datetime.datetime.strptime(datetime_query,dt_format)
-
+    duration = 30
     if real_time:
         ct_time_str = format_time(datetime_query, dt_format)
         print(ct_time_str)
@@ -136,14 +199,16 @@ def query_status(request):
     for k,v in region_pca.items():
         if is_group > 0:
             #大队测试
-            police_real =  Police.objects.filter(create_time=qt,group=int(k))
-            police_max = Police.objects.filter(create_time__range=[from_dt, end_dt],group=int(k)).aggregate(Max('people_cnt'))["people_cnt__max"]
+            police_real = 0#Police.objects.filter(create_time=qt,group=int(k))
+            police_max = 100 #Police.objects.filter(create_time__range=[from_dt, end_dt],group=int(k)).aggregate(Max('people_cnt'))["people_cnt__max"]
             region_or_dadui_name = Region_Boundary.objects.filter(group=int(k))[0].group_name
+            police_real_cnt = police_real
         else:
             police_real = Police.objects.filter(create_time=qt,region=int(k))
             police_max = Police.objects.filter(create_time__range=[from_dt, end_dt],region=int(k)).aggregate(Max('people_cnt'))["people_cnt__max"]
             region_or_dadui_name = region_hash_anti[int(k)]
-        police_real_cnt = int(police_real[0].people_cnt)
+            police_real_cnt = int(police_real[0].people_cnt)
+
         people_recommend = int((v/3.0) * police_max)
         [PCA_app_accidence, PCA_violation, PCA_call_incidence, PCA_crowd_index] = region_pca_xyzw[k]
         label = region_or_dadui_name + u":" + str(v) +u"<br/> 实际警力:"+str(police_real_cnt)+u"<br/>建议警力:"+str(people_recommend)+u"<br/>122事故分指数:"+str(PCA_call_incidence)+u"<br/>拥堵延时分指数:"+str(PCA_crowd_index)+u"<br/>APP事故分指数:"+str(PCA_app_accidence)+u"<br/>违法分指数:"+str(PCA_violation)
@@ -168,6 +233,7 @@ def train_region(request):
         end_date = request.GET.get("date_end","2017-02-28")
         start_dt = datetime.datetime.strptime(from_date+" "+start_time, "%Y-%m-%d %H:%M:%S")
         end_dt  = datetime.datetime.strptime(end_date+" "+end_time, "%Y-%m-%d %H:%M:%S")
+        duration = 30
         trainRegion(start_time = start_dt, end_time = end_dt, is_region = is_region, is_week= week_agg, duration=duration, is_group= is_group)
         ret_dict={}
         return success_response(**ret_dict)
@@ -186,6 +252,7 @@ def load_region_statistics(request):
     end_date = request.GET.get("date_end","2017-02-28")
     start_dt = datetime.datetime.strptime(from_date+" "+start_time, "%Y-%m-%d %H:%M:%S")
     end_dt  = datetime.datetime.strptime(end_date+" "+end_time, "%Y-%m-%d %H:%M:%S")
+    duration = 30
     dt_list = generate_str_arr_from_date_to_date(start_dt,end_dt,duration_minute=duration)
     json_load_file = normpath(join(BASE_DIR,  'static', 'data', 'region_index.json'))
     json_temp_wrt_file = normpath(join(BASE_DIR,  'static', 'data', 'temp_index.json'))

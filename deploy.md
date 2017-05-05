@@ -160,13 +160,30 @@ pip install django==1.8.4 django-bootstrap3 django-permanent plotly numpy scipy 
 
 service mysqld start
 
-python manage.py migrate
+#部署
+settings.py 数据库用户名和密码修改
 
+python manage.py syncdb
+python manage.py migrate
 mysql -u root
 
-source Dump20170417.sql
+source ~/Dump20170505.sql
 
 exit
 
-service iptables stop
+<!-- service iptables stop -->
+
 nohup python manage.py runserver 0.0.0.0:8000 &
+nohup python manage.py celery worker --loglevel=info &
+nohup python manage.py celery beat &
+
+添加到启动项：
+vim /etc/rc.local
+
+
+/usr/bin/python ~/Police_Index_Framework/manage.py runserver 0.0.0.0:8000 &
+/usr/bin/python ~/Police_Index_Framework/manage.py celery worker --loglevel=info &
+/usr/bin/python ~/Police_Index_Framework/manage.py celery beat &
+添加以下代码到文件末尾
+
+DEBUG = FALSE

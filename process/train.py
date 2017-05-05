@@ -6,8 +6,7 @@ import datetime,math,plotly,json
 import numpy as np
 import plotly.graph_objs as go
 from scipy.optimize import leastsq
-from process.crontab_jobs import dadui_regions
-
+dadui_regions = list(set([item_ddr.region_122_id for item_ddr in Dadui_ID.objects.filter(group_gaode_id__gt=-1)]))
 PCA_NO = 0
 def get_dadui_count(region_id):
     return Region_Boundary.objects.filter(region=region_id).count()
@@ -25,8 +24,8 @@ def partition_time(minute, duration=10):
     quotient = int(int(minute / duration) * duration)
     return quotient
 
-def format_time(idt, format):
-    incidence_minute = partition_time(idt.minute,10)
+def format_time(idt, format, duration = 10):
+    incidence_minute = partition_time(idt.minute,duration)
     incidence_dt = datetime.datetime(idt.year,idt.month,idt.day,idt.hour,incidence_minute,0,0)
     ct_time_str = incidence_dt.strftime(format)
     return ct_time_str
@@ -149,7 +148,7 @@ def preprocess_app_incidence(start_time, end_time, duration, region, is_week, gr
     #循环遍历
     for item in app_incidence:
         idt = item.create_time
-        ct_time_str = format_time(idt, "%Y-%m-%d %H:%M:%S")
+        ct_time_str = format_time(idt, "%Y-%m-%d %H:%M:%S",duration=duration)
         if region != 0:
             result_dict[ct_time_str] += 1
         else:
@@ -185,7 +184,7 @@ def preprocess_violation(start_time, end_time, duration, region, is_week, group_
     #循环遍历
     for item in violation:
         idt = item.create_time
-        ct_time_str = format_time(idt, "%Y-%m-%d %H:%M:%S")
+        ct_time_str = format_time(idt, "%Y-%m-%d %H:%M:%S",duration=duration)
         if region != 0:
             result_dict[ct_time_str] += 1
         else:
@@ -217,7 +216,7 @@ def preprocess_call_incidence(start_time, end_time, duration, region, is_week, g
     #循环遍历
     for item in call_incidences:
         idt = item.create_time
-        ct_time_str = format_time(idt, "%Y-%m-%d %H:%M:%S")
+        ct_time_str = format_time(idt, "%Y-%m-%d %H:%M:%S",duration=duration)
         if region != 0:
             result_dict[ct_time_str] += 1
         else:
@@ -250,7 +249,7 @@ def preprocess_crowd_index(start_time, end_time, duration, region, is_week, grou
     #循环遍历
     for item in crowd_index:
         idt = item.create_time
-        ct_time_str = format_time(idt, "%Y-%m-%d %H:%M:%S")
+        ct_time_str = format_time(idt, "%Y-%m-%d %H:%M:%S",duration=duration)
         if region != 0:
             result_dict[ct_time_str] = item.crowd_index
         else:
@@ -298,7 +297,7 @@ def preprocess_police(start_time, end_time, duration, region, is_week, group_id 
                 time_delta=datetime.timedelta(minutes=j*duration)
                 dt = last_dt + time_delta
                 val = last_val + j * part_val
-                ct_time_str = format_time(dt, "%Y-%m-%d %H:%M:%S")
+                ct_time_str = format_time(dt, "%Y-%m-%d %H:%M:%S",duration=duration)
                 if region != 0:
                     if group_id != -1:
                         result_dict[ct_time_str] = (val / dadui_count)
@@ -417,10 +416,14 @@ def get_data_array(start_time, end_time, region, is_week, duration=10, is_calc_p
         row_maxs = np_data_array.max(axis=1)
         row_maxs_tmp = np.repeat(row_maxs, cols).reshape((rows, cols))
         row_range = row_maxs_tmp - row_mins_tmp
-        normed_data_array = (np_data_array - row_mins_tmp)/row_range
+        if row_range.all() != 0.0:
+           normed_data_array = (np_data_array - row_mins_tmp)/row_range
+        else:
+           normed_data_array = (np_data_array - row_mins_tmp)
     else:
-        row_mins = 0  ##这个步骤row_mins和row_maxs没有用到
-        row_maxs = 0
+
+        row_mins = np.zeros(np_data_array.min(axis=1).shape)  ##这个步骤row_mins和row_maxs没有用到
+        row_maxs = np.zeros(np_data_array.max(axis=1).shape)
         normed_data_array = np_data_array
     print("normalized data successfully!")
 
@@ -571,7 +574,7 @@ def test_region(evecs, pca_no,start_time, end_time, region, is_week, duration=10
 # is_week: 表示是否按照星期聚合
 ###
 def getNormedDataArray(evecs, pca_no, start_time, end_time, duration, region, is_week,group_id = -1):
-    [normed_data_array, normed_polices, row_mins, row_maxs] = get_data_array(start_time, end_time, region, is_week, duration=10, is_calc_police=True, is_normalize=1,group_id = group_id)
+    [normed_data_array, normed_polices, row_mins, row_maxs] = get_data_array(start_time, end_time, region, is_week, duration=duration, is_calc_police=True, is_normalize=1,group_id = group_id)
     if all(evecs[:, pca_no] < np.zeros(len(evecs[:, pca_no]))):
         evecs = evecs * -1
 
@@ -584,10 +587,12 @@ def saveTarinParameter(evecs, row_mins, row_maxs, start_time, end_time, duration
     PCA_NO = 0
     [PCA_x, Police_y] = getNormedDataArray(evecs, PCA_NO, start_time, end_time, duration, region_id, is_week,group_id=group_id)
     # 下面的二维array第二个0表示PCA_num
-    app_incidence = evecs[0, PCA_NO]
-    violation = evecs[1, PCA_NO]
-    call_incidence = evecs[2, PCA_NO]
-    crowd_index = evecs[3, PCA_NO]
+    app_incidence = math.fabs(evecs[0, PCA_NO])
+    violation =  math.fabs(evecs[1, PCA_NO])
+    call_incidence =  math.fabs(evecs[2, PCA_NO])
+    crowd_index =  math.fabs(evecs[3, PCA_NO])
+    row_mins = np.fabs(row_mins)
+    row_maxs= np.fabs(row_maxs)
 
     p0 = [0.6, 0.12]
 
@@ -650,7 +655,10 @@ def get_pca_norm_and_partial_pca_val(data_array, train_parameter, INDEX_RANGE = 
                         float(train_parameter.zmax - train_parameter.zmin), float(train_parameter.wmax - train_parameter.wmin)]
     normed_data_min = np.transpose(np.matrix(normed_data_min_list))  ##利用转置变成4*1的矩阵
     normed_data_range = np.transpose(np.matrix(normed_data_list))
-    normed_data_array = (data_array - normed_data_min)/normed_data_range
+    if normed_data_range.all()!=0:
+        normed_data_array = (data_array - normed_data_min)/normed_data_range
+    else:
+        normed_data_array = (data_array - normed_data_min)
     PCA_NO = 0
     evecs = [float(train_parameter.cx), float(train_parameter.cy), float(train_parameter.cz), float(train_parameter.cw)]
     if all(evecs < np.zeros(len(evecs))):
@@ -715,7 +723,10 @@ def test_region_for_timelists(datetime_list,region_id,duration = 10):
                             float(train_parameter.zmax - train_parameter.zmin), float(train_parameter.wmax - train_parameter.wmin)]
         normed_data_min = np.transpose(np.matrix(normed_data_min_list))  ##利用转置变成4*1的矩阵
         normed_data_range = np.transpose(np.matrix(normed_data_list))
-        normed_data_array = (data_array - normed_data_min)/normed_data_range
+        if normed_data_range.all()!=0:
+            normed_data_array = (data_array - normed_data_min)/normed_data_range
+        else:
+            normed_data_array = (data_array - normed_data_min)
         evecs = [float(train_parameter.cx), float(train_parameter.cy), float(train_parameter.cz), float(train_parameter.cw)]
         if all(evecs < np.zeros(len(evecs))):
             evecs = evecs * -1
@@ -730,7 +741,7 @@ def test_region_for_timelists(datetime_list,region_id,duration = 10):
         index_list.append(region_pca_index)
     return index_list
 def get_region_index_to_json(json_load_file,tmp_wrt_file,datetime_list,region_id,duration = 10):
-    index_list = test_region_for_timelists(datetime_list,region_id,duration = 10)
+    index_list = test_region_for_timelists(datetime_list,region_id,duration = duration)
     datetime_list_rep = []
     for item in datetime_list:
         dt_str = str(item).replace(" ","\n")

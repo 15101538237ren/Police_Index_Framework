@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
-import os,datetime
+import os,datetime,random,math
 from process.models import *
 import urllib,urllib2,json,MySQLdb,pickle
 from Police_Index_Framework.settings import roadset
 from process.helpers import pinyin_hash,check_point
 from process.convert import bd2gcj
-from process.models import App_Incidence
-from Police_Index_Framework.settings import BASE_DIR,DB_APP,DB_122,TABLE_OF_VIOLATION,TABLE_OF_APP_INCIDENCE,TABLE_OF_APP_122_INCIDENCE,REAL_CROWD_URL
+from process.models import App_Incidence,Prediction_Info
+from django.db.models import Max
+from Police_Index_Framework.settings import BASE_DIR,DB_APP,DB_122,TABLE_OF_VIOLATION,TABLE_OF_APP_INCIDENCE,TABLE_OF_122_INCIDENCE,REAL_CROWD_URL
 from process.baidumap import BaiduMap
 from os.path import normpath,join
 from celery import task
+from process.train import OutputRegionIndex
 import decimal, simplejson
 MAXINT = 999999999
 #目前数据库中的所有大队id列表
@@ -51,20 +53,44 @@ class DatetimeJSONEncoder(simplejson.JSONEncoder):
         else:
             return super(DatetimeJSONEncoder, self).default(o)
 
-
 @task()
-def get_peroidic_data():
+def save_prediction_info():
     dt = datetime.datetime.now()
     now_minute = int(dt.minute / 10) * 10
-    dt_end = datetime.datetime(dt.year,dt.month,dt.day,dt.hour,now_minute,0,0)
-    dt_start = dt_end - datetime.timedelta(minutes=10)
-    output_file = open(BASE_DIR + os.sep + "data" + os.sep +"tasks.txt", "a")
-    output_file.write(datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S") + "\n")
-    output_file.close()
-    get_app_incidence(dt_start, dt_end)
-    get_call_incidence(dt_start, dt_end)
-    get_violation(dt_start, dt_end)
-    get_crowd_index()
+    # datetime_query = datetime.datetime(2017,2,28,8,0,0,0)
+    datetime_query = datetime.datetime(dt.year,dt.month,dt.day,dt.hour,now_minute,0,0)
+    qt = datetime.datetime(datetime_query.year,datetime_query.month,datetime_query.day,datetime_query.hour,0,0,0)
+    duration = 30
+    is_group = 1
+    POLICE_FROM_DT = datetime.datetime.strptime("2016-12-01 00:00:00","%Y-%m-%d %H:%M:%S")
+    POLICE_END_DT = datetime.datetime.strptime("2017-03-01 00:00:00","%Y-%m-%d %H:%M:%S")
+    region_pca, region_pca_xyzw = OutputRegionIndex(datetime_query, duration=duration,is_group=is_group)
+    for region_id in dadui_regions:
+        print "testing region_id %d" % region_id
+        region_boundaries = Region_Boundary.objects.filter(region=region_id)
+        for region_boundary in region_boundaries:
+            #大队编号
+            dadui_id = region_boundary.group
+            print "testing group_id %d" % dadui_id
+
+            #最大警力目前没数据,先置成100
+            police_max = 100
+            #police_max = Police.objects.filter(create_time__range=[POLICE_FROM_DT, POLICE_END_DT],group=int(dadui_id)).aggregate(Max('people_cnt'))["people_cnt__max"]
+            index = region_pca[str(dadui_id)]
+
+            #实际警力采用随机值
+            police_real_cnt = random.randint(50,100)
+            #police_real =  Police.objects.filter(create_time=qt,group=int(dadui_id))
+            #police_real_cnt = int(police_real[0].people_cnt)
+            people_recommend = int((index/3.0) * police_max)
+            [PCA_app_accidence, PCA_violation, PCA_call_incidence, PCA_crowd_index] = region_pca_xyzw[str(dadui_id)]
+            prediction_info = Prediction_Info(PCAx=math.fabs(PCA_app_accidence), PCAy=math.fabs(PCA_violation), PCAz=math.fabs(PCA_call_incidence),
+                                              PCAw=math.fabs(PCA_crowd_index),expect_police=people_recommend, real_police=police_real_cnt,
+                                              create_time=datetime_query, group=dadui_id, region=region_id,index=math.fabs(index))
+            prediction_info.save()
+
+    print "Save prediction info %s successful!" % datetime_query.strftime("%Y-%m-%d %H:%M:%S")
+
 
 def generate_all_dadui_crowd_index(dt_start,dt_end):
     for region_no in dadui_regions:
@@ -245,8 +271,22 @@ def label_all_dadui_id_of_db(dt_start,dt_end):
                 if flag_dadui:
                     break
         if idx % 10000 == 0:
-                print "imported %d call_incidences, labeled %d " % (idx, lbl_cnt)
-
+            print "imported %d call_incidences, labeled %d " % (idx, lbl_cnt)
+    crowd_indexs = Crowd_Index.objects.filter(create_time__range=[dt_start,dt_end])
+    print "len crowd_indexs %d" % len(crowd_indexs)
+    lbl_cnt = 0
+    for idx,crowd_index in enumerate(crowd_indexs):
+        region = crowd_index.region
+        if region in dadui_regions:
+                region_boundaries = Region_Boundary.objects.filter(region=region)
+                lbl_cnt +=1
+                for idx2,region_boundary in enumerate(region_boundaries):
+                    #大队编号
+                    group_id = region_boundary.group
+                    crowd_index_instance = Crowd_Index(region=region,group=group_id, bussiness_area=None, avg_car_speed=crowd_index.avg_car_speed, crowd_index=crowd_index.crowd_index,create_time=crowd_index.create_time, freespeed=-1, group_name=region_boundary.group_name, number=idx2+1)
+                    crowd_index_instance.save()
+        if idx % 10000 == 0:
+            print "imported %d crowd_indexs, labeled %d " % (idx, lbl_cnt)
 #定时获取中车的app事故数据,并存储到数据库
 def get_app_incidence(dt_start,dt_end):
     try:
@@ -278,6 +318,7 @@ def get_app_incidence(dt_start,dt_end):
         conn.close()
     except MySQLdb.Error,e:
          print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+
 #执行自定义sql数据下载
 def exe_sql_of_custom(host, username, password, dbname, port, sql_content):
     try:
@@ -307,7 +348,7 @@ def get_call_incidence(dt_start,dt_end):
     try:
         conn=MySQLdb.connect(host=DB_122["HOST"],user=DB_122['USER'],passwd=DB_122['PASSWORD'],db=DB_122['NAME'],port=DB_122['PORT'])
         cur=conn.cursor()
-        cur.execute("select call_time, event_content, place from "+TABLE_OF_APP_122_INCIDENCE+" where call_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and call_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
+        cur.execute("select call_time, event_content, place from "+TABLE_OF_122_INCIDENCE+" where call_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and call_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
 
         result = cur.fetchall()
 
