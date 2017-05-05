@@ -161,12 +161,17 @@ pip install django==1.8.4 django-bootstrap3 django-permanent plotly numpy scipy 
 service mysqld start
 
 #部署
-settings.py 数据库用户名和密码修改
 
 python manage.py syncdb
+python manage.py makemigrations
 python manage.py migrate
 mysql -u root
 
+root
+root
+
+CREATE DATABASE IF NOT EXISTS police_index default charset utf8 COLLATE utf8_general_ci;
+use police_index;
 source ~/Dump20170505.sql
 
 exit
@@ -187,3 +192,5 @@ vim /etc/rc.local
 添加以下代码到文件末尾
 
 DEBUG = FALSE
+
+

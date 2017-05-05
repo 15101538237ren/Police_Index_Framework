@@ -18,7 +18,7 @@ from django.contrib import admin
 from Police_Index_Framework import settings
 
 urlpatterns = [
-    url(r'^static/(?P<path>.*)$', 'django.views.static.serve',{ 'document_root': settings.STATIC_ROOT }),
-    url(r'^admin/', include(admin.site.urls)),
-    url(r'^process/', include('process.urls',namespace="process")),
+    url(r'^police/static/(?P<path>.*)$', 'django.views.static.serve',{ 'document_root': settings.STATIC_ROOT }),
+    url(r'^police/admin/', include(admin.site.urls)),
+    url(r'^police/process/', include('process.urls',namespace="process")),
 ]

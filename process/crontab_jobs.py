@@ -13,6 +13,9 @@ from os.path import normpath,join
 from celery import task
 from process.train import OutputRegionIndex
 import decimal, simplejson
+import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
 MAXINT = 999999999
 #目前数据库中的所有大队id列表
 group_ids = [item.group for item in Region_Boundary.objects.all()]
@@ -251,7 +254,7 @@ def label_all_dadui_id_of_db(dt_start,dt_end):
     call_incidences = Call_Incidence.objects.filter(create_time__range=[dt_start,dt_end])
     print "len call_incidences %d" % len(call_incidences)
     lbl_cnt = 0
-    for idx,call_incidence in enumerate(call_incidences):
+    for call_incidence in call_incidences:
         lng = float(call_incidence.longitude)
         lat = float(call_incidence.latitude)
 
@@ -270,8 +273,8 @@ def label_all_dadui_id_of_db(dt_start,dt_end):
                         break
                 if flag_dadui:
                     break
-        if idx % 10000 == 0:
-            print "imported %d call_incidences, labeled %d " % (idx, lbl_cnt)
+        #if idx % 10000 == 0:
+        #    print "imported %d call_incidences, labeled %d " % (idx, lbl_cnt)
     crowd_indexs = Crowd_Index.objects.filter(create_time__range=[dt_start,dt_end])
     print "len crowd_indexs %d" % len(crowd_indexs)
     lbl_cnt = 0
@@ -290,30 +293,46 @@ def label_all_dadui_id_of_db(dt_start,dt_end):
 #定时获取中车的app事故数据,并存储到数据库
 def get_app_incidence(dt_start,dt_end):
     try:
-        conn=MySQLdb.connect(host=DB_APP["HOST"],user=DB_APP['USER'],passwd=DB_APP['PASSWORD'],db=DB_APP['NAME'],port=DB_APP['PORT'])
+        conn=MySQLdb.connect(host=DB_APP["HOST"],user=DB_APP['USER'],passwd=DB_APP['PASSWORD'],db=DB_APP['NAME'],port=3306)
         cur=conn.cursor()
+        cur.execute('SET NAMES UTF8')
         cur.execute("select longitude, latitude, latlng_address, create_time from " + TABLE_OF_APP_INCIDENCE + " where proof_finish = '1' and create_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and create_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
 
         result = cur.fetchall()
 
         print "len results %d" % len(result)
-        for idx,(lng, lat, address, create_time) in enumerate(result):
-            lng = float(lng)
-            lat = float(lat)
-            #先用百度的边界查询在哪个区
-            region = judge_region(lng=lng, lat= lat)
+        print type(result)
+        result = list(result)
+        for item in result:
+            item = list(item)
+            lng = item[0]
+            lat = item[1]
+            address = item[2]
+            create_time = item[3]
+            if lng == None or lat == None or address ==None or create_time==None:
+                continue
+            try:
+                if not isinstance(lng, str) or not isinstance(lat,str):
+                    continue
+                lng = float(lng)
+                lat = float(lat)
+                #先用百度的边界查询在哪个区
+                region = judge_region(lng=lng, lat= lat)
 
-            #转换成高德坐标再存
-            point = [lng, lat]
-            lng,lat = bd2gcj(point)
+                #转换成高德坐标再存
+                point = [lng, lat]
+                lng,lat = bd2gcj(point)
 
-            # 查询在哪个大队
-            group = judge_group(lng=lng, lat= lat)
+                # 查询在哪个大队
+                group = judge_group(lng=lng, lat= lat)
 
-            app_incidence = App_Incidence(longitude=lng, latitude=lat, place=address, create_time=create_time, region=region, group = group)
-            app_incidence.save()
+                app_incidence = App_Incidence(longitude=lng, latitude=lat, place=address, create_time=create_time, region=region, group = group)
+                app_incidence.save()
+            except Exception,e:
+                print "decode failed"
+                continue
 
-            print "imported %d app_incidences" % idx
+            #print "imported %d app_incidences" % idx
         cur.close()
         conn.close()
     except MySQLdb.Error,e:
@@ -346,16 +365,22 @@ def exe_sql_of_custom(host, username, password, dbname, port, sql_content):
 #定时获取122事故数据,并存储到数据库
 def get_call_incidence(dt_start,dt_end):
     try:
-        conn=MySQLdb.connect(host=DB_122["HOST"],user=DB_122['USER'],passwd=DB_122['PASSWORD'],db=DB_122['NAME'],port=DB_122['PORT'])
+        conn=MySQLdb.connect(host=DB_122["HOST"],user=DB_122['USER'],passwd=DB_122['PASSWORD'],db=DB_122['NAME'],port=3306)
         cur=conn.cursor()
+        cur.execute('SET NAMES UTF8')
         cur.execute("select call_time, event_content, place from "+TABLE_OF_122_INCIDENCE+" where call_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and call_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
 
         result = cur.fetchall()
 
         print "len call incidences results %d" % len(result)
-        for idx,(call_time, event_content, place) in enumerate(result):
-            bdmap = BaiduMap("北京市")
+        result = list(result)
+        for item in result:
+            item = list(item)
+            call_time = item[0]
             try:
+                event_content = item[1]
+                place = item[2]
+                bdmap = BaiduMap("北京市")
                 bd_point = bdmap.getLocation(place)
                 if bd_point is None:
                     continue
@@ -389,14 +414,20 @@ def get_call_incidence(dt_start,dt_end):
 #定时获取中车的违法举报数据,并存储到数据库
 def get_violation(dt_start,dt_end):
     try:
-        conn=MySQLdb.connect(host=DB_APP["HOST"],user=DB_APP['USER'],passwd=DB_APP['PASSWORD'],db=DB_APP['NAME'],port=DB_APP['PORT'])
+        conn=MySQLdb.connect(host=DB_APP["HOST"],user=DB_APP['USER'],passwd=DB_APP['PASSWORD'],db=DB_APP['NAME'],port= 3306)
         cur=conn.cursor()
+        cur.execute('SET NAMES UTF8')
         cur.execute("select lng, lat, create_time from " + TABLE_OF_VIOLATION + " where create_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and create_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
 
         result = cur.fetchall()
 
         print "len violation results %d" % len(result)
-        for idx,(lng, lat, create_time) in enumerate(result):
+        result = list(result)
+        for item in result:
+            item = list(item)
+            lng, lat, create_time = item[0], item[1], item[2]
+            if not isinstance(lng, str) or not isinstance(lat,str):
+                continue
             lng = float(lng)
             lat = float(lat)
             #先用百度的边界查询在哪个区
@@ -412,7 +443,7 @@ def get_violation(dt_start,dt_end):
             violation = Violation(longitude=lng, latitude=lat, create_time=create_time, region=region, group = group, breach_type= -1)
             violation.save()
 
-            print "imported %d violations" % idx
+            #print "imported %d violations" % idx
         cur.close()
         conn.close()
     except MySQLdb.Error,e:

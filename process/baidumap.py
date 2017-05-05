@@ -89,8 +89,8 @@ class BaiduMap:
    
     #发送请求
     def sendAndRec(self):
-        url = self.host + self.path + urllib.parse.urlencode(self.param)  ##在Python2中为urllib.urlencode
-        r = urllib.request.urlopen(url).read()   ##Python2中为urllib.urlopen
+        url = self.host + self.path + urllib.urlencode(self.param)  ##在Python2中为urllib.urlencode
+        r = urllib.urlopen(url).read()   ##Python2中为urllib.urlopen
         #print(type(r.decode("utf-8")))
         result = json.loads(r.decode("utf-8"))
         return result

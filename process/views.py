@@ -3,7 +3,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.http import HttpResponse
 from process.helpers import read_file,week_hash,ajax_required,success_response
-from process.crontab_jobs import exe_sql_of_custom,get_app_incidence
+from process.crontab_jobs import exe_sql_of_custom,get_app_incidence,get_call_incidence,get_violation,get_crowd_index
 from os.path import normpath,join
 from Police_Index_Framework.settings import BASE_DIR,API_KEY
 from django.views.decorators.http import require_GET, require_POST
@@ -103,9 +103,13 @@ def custom_download(request):
 #大队边界可视化
 def dadui_visualize(request):
     # dt_start = datetime.datetime(2017,1,1,0,0,0,0)
-    dt_start = datetime.datetime(2017,1,1,0,0,0,0)
+    dt_start = datetime.datetime(2017,5,1,0,0,0,0)
     # dt_start = datetime.datetime(2017,1,1,0,0,0,0)
-    dt_end = datetime.datetime(2017,3,1,0,0,0,0)
+    dt_end = datetime.datetime(2017,5,1,8,0,0,0)
+    # get_app_incidence(dt_start,dt_end)
+    # get_call_incidence(dt_start,dt_end)
+    # get_violation(dt_start,dt_end)
+    # get_crowd_index()
     # getRealTimePoliceIndex(request)
     # import_violation_data_from_db(dt_start,dt_end)
     # get_crowd_index()
