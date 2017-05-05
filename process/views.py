@@ -1,17 +1,47 @@
 # coding: utf-8
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.http import HttpResponse
 from process.train import *
-from process.helpers import pinyin_hash,week_hash,ajax_required,success_response
+from process.helpers import read_file,week_hash,ajax_required,success_response
 from import_data import *
 from crontab_jobs import *
 from helpers import region_hash_anti
 import datetime
 from django.db.models import Max
 from os.path import normpath,join
-from Police_Index_Framework.settings import BASE_DIR
+from Police_Index_Framework.settings import BASE_DIR,API_KEY
 from django.views.decorators.http import require_GET, require_POST
 from process.api import *
+
+def custom_download(request):
+    if request.method == 'GET':
+        apikey = API_KEY
+        return render_to_response('process/custom_download.html', locals(), context_instance=RequestContext(request))
+    else:
+        req = request.POST
+        #查询的语句
+        sql_content = req.get("sql_content", "")
+        apikey = req.get("apikey", "")
+        host = req.get("host", "")
+        username = req.get("username", "")
+        password = req.get("password", "")
+        dbname = req.get("dbname", "")
+        port = int(req.get("port", ""))
+
+        if apikey != API_KEY or sql_content=="" or host=="" or username =="" or password =="" or dbname =="":
+            return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
+        else:
+            rtn,filename = exe_sql_of_custom(host=host, username= username, password=password, dbname=dbname, port=port,sql_content=sql_content)
+            if rtn!="":
+                response = HttpResponse(read_file(rtn),
+                            content_type='APPLICATION/OCTET-STREAM')  #设定文件头，这种设定可以让任意文件都能正确下载，而且已知文本文件不是本地打开
+                response['Content-Disposition'] = 'attachment; filename='+filename #设定传输给客户端的文件名称
+                response['Content-Length'] = os.path.getsize(rtn)  #传输给客户端的文件大小
+                os.remove(rtn)
+                return response
+            else:
+                return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
 
 duration = 10
 #大队边界可视化
@@ -28,8 +58,8 @@ def dadui_visualize(request):
     # get_peroidic_data()
     # generate_all_dadui_crowd_index(dt_start,dt_end)
     input_crowd_file_path = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2016_crowd.xlsx"
-    output_file_path = "/Users/Ren/PycharmProjects/Police_Index_Framework/static/js/data.js"
-    wrt_data_to_js(output_file_path)
+    output_file_path = "/Users/Ren/PycharmProjects/Police_Index_Framework/static/js/dadui_data.js"
+    # wrt_data_to_js(output_file_path)
     # generate_datajs_dadui(output_file_path)
     # import_crowd_data(input_crowd_file_path=input_crowd_file_path)
     return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))

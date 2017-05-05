@@ -1,0 +1,75 @@
+{% extends "process/base.html" %}
+{% load static from staticfiles %}
+{% block title %}页面{% endblock %}
+{% block head %}
+    <link rel="stylesheet" type="text/css" media="screen" href="{% static "css/jquery-confirm.min.css" %}" />
+    <script type="text/javascript" src="{% static "js/jquery-confirm.min.js" %}" charset="UTF-8"></script>
+    <script type="text/javascript">
+    function flash(text,time)
+    {
+        $("#loading_text").html(text);
+        $("#loading_div2").css('display','block');
+        if(time!=0)setTimeout(function(){
+            $("#loading_div2").css('display','none');
+        },time);
+    }
+    </script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="row">
+    <div id="toolbar">
+           <br/>
+            <br/>
+           <div class="form-inline" role="form">
+            <form id = "download_form" class="form-inline"  action="{% url 'process:custom_download' %}" method="POST">
+                <div class="form-group">
+                    <label for="host" class="control-label">Host:</label>
+                    <input type="text" name="host" placeholder="host" class="form-control" style="width: 200px;" />
+               </div>&nbsp;
+                <div class="form-group">
+                    <label for="username" class="control-label">UserName:</label>
+                    <input type="text" name="username" placeholder="username" class="form-control" style="width: 100px;" />
+               </div>&nbsp;
+               <div class="form-group">
+                    <label for="password" class="control-label">Password:</label>
+                    <input type="password" name="password" placeholder="password" class="form-control" style="width: 100px;" />
+               </div>&nbsp;
+                <div class="form-group">
+                    <label for="dbname" class="control-label">DB Name:</label>
+                    <input type="text" name="dbname" placeholder="dbname" class="form-control" style="width: 150px;" />
+               </div>&nbsp;
+               <div class="form-group">
+                    <label for="port" class="control-label">Port:</label>
+                    <input type="text" name="port" class="form-control" style="width: 60px;" value="3306"/>
+               </div>&nbsp;
+               <div class="form-group">
+                    <label for="sql_content" class="control-label">SQL:</label>
+                    <input type="text" name="sql_content" placeholder="input your sql .." class="form-control" style="width: 500px;" />
+               </div>&nbsp;
+            <div class="form-group">
+                <input type="hidden" id="apikey" name="apikey" value="{{ apikey }}">
+                <input type="submit" class="btn btn-primary btn-sm"  style="width: 80px;" value="下载"/>
+                {% csrf_token %}
+            </div>&nbsp;
+                </form>
+           </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block endscript %}
+    <script type="text/javascript">
+        $('.form-date').datetimepicker({
+          language:'zh-CN',
+          weekStart:1,
+          todayBtn:1,
+          autoclose:1,
+          todayHighlight:1,
+          startView:2,
+          minView:2,
+          forceParse:0
+        });
+    </script>
+{% endblock %}

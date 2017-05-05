@@ -129,3 +129,14 @@ def json_response(func):
             data = simplejson.dumps(str(objects))
         return HttpResponse(data, "application/json")
     return decorator
+
+#大文件下载，设定缓存大小
+def read_file(fn, buf_size=262144):
+    f = open(fn, "rb")
+    while True:
+        c = f.read(buf_size)
+        if c:
+            yield c
+        else:
+            break
+    f.close()

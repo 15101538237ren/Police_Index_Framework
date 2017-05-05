@@ -154,7 +154,7 @@ roadset_pkl_file = open(BASE_DIR+ os.sep+ "data"+os.sep+"boundary.pkl","rb")
 roadset = pickle.load(roadset_pkl_file)
 roadset_pkl_file.close()
 
-
+API_KEY = "a296cc76f8fb3fd96208cb21e1ed3242"
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
 

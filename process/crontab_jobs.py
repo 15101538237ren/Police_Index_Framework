@@ -8,6 +8,7 @@ from process.convert import bd2gcj
 from process.models import App_Incidence
 from Police_Index_Framework.settings import BASE_DIR
 from process.baidumap import BaiduMap
+from os.path import normpath,join
 from celery import task
 MAXINT = 999999999
 #目前数据库中的所有大队id列表
@@ -258,7 +259,28 @@ def get_app_incidence(dt_start,dt_end):
         conn.close()
     except MySQLdb.Error,e:
          print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+#执行自定义sql数据下载
+def exe_sql_of_custom(host, username, password, dbname, port, sql_content):
+    try:
+        conn=MySQLdb.connect(host=host,user=username,passwd=password,db=dbname,port=port)
+        cur=conn.cursor()
+        cur.execute(sql_content)
 
+        result = cur.fetchall()
+
+        cur.close()
+        conn.close()
+        print "len results %d" % len(result)
+
+        file_name = datetime.datetime.now().strftime('%Y%m%d%H%M%S')+".json"
+        output_file_path =normpath(join(BASE_DIR, "data", "temp_download", file_name))
+        outfile = open(output_file_path,"w")
+        outfile.write(json.dumps(result))
+        outfile.close()
+        return output_file_path, file_name
+    except MySQLdb.Error,e:
+        print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+        return "",""
 #定时获取122事故数据,并存储到数据库
 def get_call_incidence(dt_start,dt_end):
     try:
@@ -393,6 +415,7 @@ def get_boundary_of(rid, group_name):
                 group_id = result["data"]["id"] if "id" in result["data"].keys() else -1
                 geo_boundary = result["data"]["geo"] if "geo" in result["data"].keys() else ""
                 if group_id!=-1 and geo_boundary != "":
+                    #高德坐标
                     geo_boundary = json.dumps(geo_boundary)
                     region_boundary = Region_Boundary(region=-1, group= group_id,group_name= group_name, geo_boundary=geo_boundary)
                     region_boundary.save()

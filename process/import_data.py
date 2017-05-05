@@ -3,7 +3,7 @@ import xlrd,os,datetime,pytz,csv,calendar,json
 from process.models import *
 from process.helpers import pinyin_hash,check_point,region_hash2
 from process.baidumap import BaiduMap
-from process.convert import bd2gcj
+from process.convert import bd2gcj,gcj2bd
 from Police_Index_Framework.settings import roadset
 from crontab_jobs import dadui_regions
 import MySQLdb
@@ -450,10 +450,15 @@ def get_region_boundary_list(geo_boundary):
     rb_coord_list = []
     idx = 0
     for item in geo_boundary:
-        rb_coord_list.append([item["x"],item["y"]])
+        lng = item["x"]
+        lat = item["y"]
+        point = [lng, lat]
+        #将高德坐标转换成百度坐标
+        lng,lat = gcj2bd(point)
+        rb_coord_list.append([lng, lat])
         if(idx < len(geo_boundary) -1):
-            geo_center_x += item["x"]
-            geo_center_y += item["y"]
+            geo_center_x += lng
+            geo_center_y += lat
         idx += 1
     geo_center_x /= float(len(geo_boundary) - 1)
     geo_center_y /= float(len(geo_boundary) - 1)
