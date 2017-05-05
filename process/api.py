@@ -47,7 +47,7 @@ def insertData():
 #serviceKey:
 #callback:
 @json_response
-def getRealTimePoliceIndex(request):
+def test(request):
     if request.method == "GET":
         # service = request.GET.get("service", None)
         # serviceKey = request.GET.get("serviceKey", None)
@@ -88,7 +88,7 @@ def getRealTimePoliceIndex(request):
 
 #callback:
 @json_response
-def test(request):
+def getRealTimePoliceIndex(request):
     req = urllib2.Request(REAL_CROWD_URL)
     res = urllib2.urlopen(req).read()
     result = json.loads(res.decode("utf-8"))
