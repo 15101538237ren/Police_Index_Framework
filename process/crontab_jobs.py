@@ -10,6 +10,7 @@ from Police_Index_Framework.settings import BASE_DIR
 from process.baidumap import BaiduMap
 from os.path import normpath,join
 from celery import task
+import decimal, simplejson
 MAXINT = 999999999
 #目前数据库中的所有大队id列表
 group_ids = [item.group for item in Region_Boundary.objects.all()]
@@ -32,6 +33,35 @@ dadui_boundaries = pickle.load(dadui_boundary_pklfile)
 dadui_boundary_pklfile.close()
 
 dadui_regions = list(set([item_ddr.region_122_id for item_ddr in Dadui_ID.objects.filter(group_gaode_id__gt=-1)]))
+def safe_new_datetime(d):
+    kw = [d.year, d.month, d.day]
+    if isinstance(d, datetime.datetime):
+        kw.extend([d.hour, d.minute, d.second, d.microsecond, d.tzinfo])
+    return datetime.datetime(*kw)
+
+def safe_new_date(d):
+    return datetime.date(d.year, d.month, d.day)
+
+class DatetimeJSONEncoder(simplejson.JSONEncoder):
+    """可以序列化时间的JSON"""
+
+    DATE_FORMAT = "%Y-%m-%d"
+    TIME_FORMAT = "%H:%M:%S"
+
+    def default(self, o):
+        if isinstance(o, datetime.datetime):
+            d = safe_new_datetime(o)
+            return d.strftime("%s %s" % (self.DATE_FORMAT, self.TIME_FORMAT))
+        elif isinstance(o, datetime.date):
+            d = safe_new_date(o)
+            return d.strftime(self.DATE_FORMAT)
+        elif isinstance(o, datetime.time):
+            return o.strftime(self.TIME_FORMAT)
+        elif isinstance(o, decimal.Decimal):
+            return str(o)
+        else:
+            return super(DatetimeJSONEncoder, self).default(o)
+
 
 @task()
 def get_peroidic_data():
@@ -275,12 +305,14 @@ def exe_sql_of_custom(host, username, password, dbname, port, sql_content):
         file_name = datetime.datetime.now().strftime('%Y%m%d%H%M%S')+".json"
         output_file_path =normpath(join(BASE_DIR, "data", "temp_download", file_name))
         outfile = open(output_file_path,"w")
-        outfile.write(json.dumps(result))
+        outfile.write(simplejson.dumps(result, use_decimal=True,cls=DatetimeJSONEncoder))
         outfile.close()
         return output_file_path, file_name
     except MySQLdb.Error,e:
-        print "Mysql Error %d: %s" % (e.args[0], e.args[1])
-        return "",""
+        error_info = "Mysql Error %d: %s" % (e.args[0], e.args[1])
+        print error_info
+
+        return "",error_info
 #定时获取122事故数据,并存储到数据库
 def get_call_incidence(dt_start,dt_end):
     try:

@@ -122,6 +122,13 @@
     {% block head %}{% endblock %}
 </head>
 <body>
+    {% if errors %}
+        <div class="alert alert-danger col-md-offset-2 col-md-8">
+            <p class="col-sm-offset-2 col-sm-8">
+                {{ errors |safe }}
+            </p >
+        </div>
+    {% endif %}
     {% block content %}
     {% endblock %}
 <div id="loading_div" class="alert alert-default" style="background:#666666;width:100px;height:100px;text-align:center;padding-top:50px;position:fixed;left:50%;top:50%;display:none;margin-left:-55px;margin-top:-55px;">

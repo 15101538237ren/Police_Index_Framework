@@ -41,7 +41,8 @@ def custom_download(request):
                 os.remove(rtn)
                 return response
             else:
-                return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
+                errors = filename
+                return render_to_response('process/errors.html', locals(), context_instance=RequestContext(request))
 
 duration = 10
 #大队边界可视化
