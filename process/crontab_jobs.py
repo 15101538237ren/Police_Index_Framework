@@ -6,7 +6,7 @@ from Police_Index_Framework.settings import roadset
 from process.helpers import pinyin_hash,check_point
 from process.convert import bd2gcj
 from process.models import App_Incidence
-from Police_Index_Framework.settings import BASE_DIR,DB_APP,DB_122,TABLE_OF_VIOLATION,TABLE_OF_APP_INCIDENCE,TABLE_OF_APP_122_INCIDENCE
+from Police_Index_Framework.settings import BASE_DIR,DB_APP,DB_122,TABLE_OF_VIOLATION,TABLE_OF_APP_INCIDENCE,TABLE_OF_APP_122_INCIDENCE,REAL_CROWD_URL
 from process.baidumap import BaiduMap
 from os.path import normpath,join
 from celery import task
@@ -379,8 +379,7 @@ def get_violation(dt_start,dt_end):
 
 #定时获取高德拥堵指数,存入数据库
 def get_crowd_index():
-    real_index_url = 'https://tp-restapi.amap.com/gate?sid=30010&reqData={%22city%22:%22110000%22,%22dateType%22:0,%22userdefined%22:%22true%22}&serviceKey=2F77255FF77D948DF3FED20E0C19B14F'
-    req = urllib2.Request(real_index_url)
+    req = urllib2.Request(REAL_CROWD_URL)
     res = urllib2.urlopen(req).read()
     result = json.loads(res.decode("utf-8"))
     succ = 0

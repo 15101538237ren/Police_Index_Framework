@@ -3,13 +3,14 @@
 ##这个文件用来便于外部访问，请求实时指挥指数
 
 import datetime,json
-from process.models import Police,Prediction_Info
+from process.models import Police,Prediction_Info, Region_Boundary
 from helpers import region_hash_anti
 from django.db.models import Max
 from process.train import OutputRegionIndex
 from django.http import JsonResponse
 from process.helpers import json_response
 import urllib2,random
+from Police_Index_Framework.settings import REAL_CROWD_URL
 
 def insertData():
     from_dt = datetime.datetime(2016, 12, 1, 0, 0, 0, 0)
@@ -52,8 +53,7 @@ def getRealTimePoliceIndex(request):
         # serviceKey = request.GET.get("serviceKey", None)
         # callback = request.GET.get("callback", None)
         # reqData = request.GET.get("reqData", None)
-        real_index_url = 'https://tp-restapi.amap.com/gate?sid=30010&reqData={%22city%22:%22110000%22,%22dateType%22:0,%22userdefined%22:%22true%22}&serviceKey=2F77255FF77D948DF3FED20E0C19B14F'
-        req = urllib2.Request(real_index_url)
+        req = urllib2.Request(REAL_CROWD_URL)
         res = urllib2.urlopen(req).read()
         result = json.loads(res.decode("utf-8"))
         data_list = []
@@ -85,3 +85,43 @@ def getRealTimePoliceIndex(request):
                         {"description":"","freespeed":47.6813,"id":"22_17","index":0.6297,"name":"樱桃园大队","number":12,"speed":29.3738}]
             data_list = temp_data_list
         return data_list
+
+#callback:
+@json_response
+def test(request):
+    req = urllib2.Request(REAL_CROWD_URL)
+    res = urllib2.urlopen(req).read()
+    result = json.loads(res.decode("utf-8"))
+    data_list = []
+    succ = 0
+    dt = datetime.datetime.now()
+    now_minute = int(dt.minute / 10) * 10
+    duration = 10
+    datetime_query = datetime.datetime(dt.year,dt.month,dt.day,dt.hour,now_minute,0,0)
+    qt = datetime.datetime(datetime_query.year,datetime_query.month,datetime_query.day,datetime_query.hour,0,0,0)
+    is_group = 1
+    POLICE_FROM_DT = datetime.datetime.strptime("2016-12-01 00:00:00","%Y-%m-%d %H:%M:%S")
+    POLICE_END_DT = datetime.datetime.strptime("2017-03-01 00:00:00","%Y-%m-%d %H:%M:%S")
+    region_pca, region_pca_xyzw = OutputRegionIndex(datetime_query, duration=duration,is_group=is_group)
+    if ("status" in result.keys()) and ("data" in result.keys()):
+        if "code" in result["status"]:
+            if result["status"]["code"] == 0:
+                succ = 1
+                for idx, data in enumerate(result["data"]):
+                    id_str = data["id"] if "id" in result["data"][idx].keys() else ""
+                    dadui_id = int(id_str.split("_")[1])
+                    police_max = Police.objects.filter(create_time__range=[POLICE_FROM_DT, POLICE_END_DT],group=int(dadui_id)).aggregate(Max('people_cnt'))["people_cnt__max"]
+                    index = region_pca[str(dadui_id)]
+
+                    police_real =  Police.objects.filter(create_time=qt,group=int(dadui_id))
+                    police_real_cnt = int(police_real[0].people_cnt)
+                    people_recommend = int((index/3.0) * police_max)
+                    [PCA_app_accidence, PCA_violation, PCA_call_incidence, PCA_crowd_index] = region_pca_xyzw[str(dadui_id)]
+                    data["index"] = index
+                    data["violation_index"] = PCA_violation
+                    data["accidents_index"] = PCA_app_accidence + PCA_call_incidence
+                    data["crowd_index"] = PCA_crowd_index
+                    data["real_police_cnt"] = police_real_cnt
+                    data["suggested_police_cnt"] =people_recommend
+                    data_list.append(data)
+    return data_list

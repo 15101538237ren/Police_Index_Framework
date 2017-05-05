@@ -179,3 +179,5 @@ DB_122 = {
 TABLE_OF_VIOLATION = 'breach_traffic_rules'
 TABLE_OF_APP_INCIDENCE ="ig_task_info"
 TABLE_OF_APP_122_INCIDENCE = "t_zhzs"
+REAL_CROWD_URL = 'https://tp-restapi.amap.com/gate?sid=30010&reqData={%22city%22:%22110000%22,%22dateType%22:0,%22userdefined%22:%22true%22}&serviceKey=2F77255FF77D948DF3FED20E0C19B14F'
+
