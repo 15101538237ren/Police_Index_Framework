@@ -6,7 +6,7 @@ from Police_Index_Framework.settings import roadset
 from process.helpers import pinyin_hash,check_point
 from process.convert import bd2gcj
 from process.models import App_Incidence
-from Police_Index_Framework.settings import BASE_DIR
+from Police_Index_Framework.settings import BASE_DIR,DB_APP,DB_122,TABLE_OF_VIOLATION,TABLE_OF_APP_INCIDENCE,TABLE_OF_APP_122_INCIDENCE
 from process.baidumap import BaiduMap
 from os.path import normpath,join
 from celery import task
@@ -15,17 +15,6 @@ MAXINT = 999999999
 #目前数据库中的所有大队id列表
 group_ids = [item.group for item in Region_Boundary.objects.all()]
 group_shortnames = [item.group_short_name for item in Dadui_ID.objects.all()]
-
-zhongche_host =''
-zhongche_username = ''
-zhongche_pwd = ''
-zhongche_app_accidence_db_name = ''
-zhongche_port = 3306
-violation_db_name = 'mobile_bjjj'
-
-table_name_of_violation = 'breach_traffic_rules'
-table_name_of_app_incidences ="ig_task_info"
-table_name_of_122 = "weizhi"
 
 dadui_boundary_pkl_path = BASE_DIR + os.sep + "data" + os.sep + "dadui_boundary.pkl"
 dadui_boundary_pklfile = open(dadui_boundary_pkl_path,"rb")
@@ -261,9 +250,9 @@ def label_all_dadui_id_of_db(dt_start,dt_end):
 #定时获取中车的app事故数据,并存储到数据库
 def get_app_incidence(dt_start,dt_end):
     try:
-        conn=MySQLdb.connect(host=zhongche_host,user=zhongche_username,passwd=zhongche_username,db=zhongche_app_accidence_db_name,port=zhongche_port)
+        conn=MySQLdb.connect(host=DB_APP["HOST"],user=DB_APP['USER'],passwd=DB_APP['PASSWORD'],db=DB_APP['NAME'],port=DB_APP['PORT'])
         cur=conn.cursor()
-        cur.execute("select longitude, latitude, latlng_address, create_time from " + table_name_of_app_incidences + " where proof_finish = '1' and create_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and create_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
+        cur.execute("select longitude, latitude, latlng_address, create_time from " + TABLE_OF_APP_INCIDENCE + " where proof_finish = '1' and create_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and create_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
 
         result = cur.fetchall()
 
@@ -316,9 +305,9 @@ def exe_sql_of_custom(host, username, password, dbname, port, sql_content):
 #定时获取122事故数据,并存储到数据库
 def get_call_incidence(dt_start,dt_end):
     try:
-        conn=MySQLdb.connect(host=zhongche_host,user=zhongche_username,passwd=zhongche_username,db=zhongche_app_accidence_db_name,port=zhongche_port)
+        conn=MySQLdb.connect(host=DB_122["HOST"],user=DB_122['USER'],passwd=DB_122['PASSWORD'],db=DB_122['NAME'],port=DB_122['PORT'])
         cur=conn.cursor()
-        cur.execute("select call_time, event_content, place from "+table_name_of_122+" where call_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and call_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
+        cur.execute("select call_time, event_content, place from "+TABLE_OF_APP_122_INCIDENCE+" where call_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and call_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
 
         result = cur.fetchall()
 
@@ -359,9 +348,9 @@ def get_call_incidence(dt_start,dt_end):
 #定时获取中车的违法举报数据,并存储到数据库
 def get_violation(dt_start,dt_end):
     try:
-        conn=MySQLdb.connect(host=zhongche_host,user=zhongche_username,passwd=zhongche_username,db=violation_db_name,port=zhongche_port)
+        conn=MySQLdb.connect(host=DB_APP["HOST"],user=DB_APP['USER'],passwd=DB_APP['PASSWORD'],db=DB_APP['NAME'],port=DB_APP['PORT'])
         cur=conn.cursor()
-        cur.execute("select lng, lat, create_time from " + table_name_of_violation + " where create_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and create_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
+        cur.execute("select lng, lat, create_time from " + TABLE_OF_VIOLATION + " where create_time >= cast('"+dt_start.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) and create_time < cast('"+dt_end.strftime("%Y-%m-%d %H:%M:%S")+"' as datetime) ")
 
         result = cur.fetchall()
 

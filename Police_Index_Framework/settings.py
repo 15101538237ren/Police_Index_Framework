@@ -157,4 +157,25 @@ roadset_pkl_file.close()
 API_KEY = "a296cc76f8fb3fd96208cb21e1ed3242"
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
-
+#APP事故和违法对应的数据库配置
+DB_APP = {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'mobile_bjjj',
+        'USER': 'zcbl_select',
+        'PASSWORD': 'zcbl_select',
+        'HOST': '192.166.8.8',
+        'PORT': '3306',
+    }
+#122事故的数据库配置
+DB_122 = {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': '122_transfer',
+        'USER': 'zcbl_select',
+        'PASSWORD': 'zcbl_select',
+        'HOST': '192.166.31.6',
+        'PORT': '3306',
+    }
+#各种表的名称
+TABLE_OF_VIOLATION = 'breach_traffic_rules'
+TABLE_OF_APP_INCIDENCE ="ig_task_info"
+TABLE_OF_APP_122_INCIDENCE = "t_zhzs"
