@@ -194,3 +194,6 @@ vim /etc/rc.local
 DEBUG = FALSE
 
 
+/police/
+use police_index;
+delete from process_app_incidence where create_time between '2017/3/1' and '2017/3/1'

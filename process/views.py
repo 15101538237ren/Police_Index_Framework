@@ -14,6 +14,7 @@ from process.models import Prediction_Info,Police,Region_Boundary
 from Police_Index_Framework.settings import REAL_CROWD_URL,API_KEY
 from process.train import generate_str_arr_from_date_to_date,trainRegion,get_region_index_to_json,format_time,OutputRegionIndex
 from process.helpers import region_hash_anti,region_hash,pinyin_hash
+from import_data import import_app_incidences_from_json
 
 #city: 表示城市
 #order:(bool) 0表示按照指数的名称排序，1表示按照指数的大小排序（从大到小）
@@ -106,6 +107,8 @@ def dadui_visualize(request):
     dt_start = datetime.datetime(2017,5,1,0,0,0,0)
     # dt_start = datetime.datetime(2017,1,1,0,0,0,0)
     dt_end = datetime.datetime(2017,5,1,8,0,0,0)
+    input_file = "/Users/Ren/Downloads/20170505222412.json"
+    import_app_incidences_from_json(input_file)
     # get_app_incidence(dt_start,dt_end)
     # get_call_incidence(dt_start,dt_end)
     # get_violation(dt_start,dt_end)

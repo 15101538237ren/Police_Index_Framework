@@ -343,6 +343,7 @@ def exe_sql_of_custom(host, username, password, dbname, port, sql_content):
     try:
         conn=MySQLdb.connect(host=host,user=username,passwd=password,db=dbname,port=port)
         cur=conn.cursor()
+        cur.execute('SET NAMES UTF8')
         cur.execute(sql_content)
 
         result = cur.fetchall()

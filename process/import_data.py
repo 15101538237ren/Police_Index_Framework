@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-import xlrd,os,datetime,pytz,csv,calendar,json
+import xlrd,os,datetime,pytz,csv,calendar,json,codecs
 from process.models import *
 from process.helpers import pinyin_hash,check_point,region_hash2
 from process.baidumap import BaiduMap
 from process.convert import bd2gcj,gcj2bd
 from Police_Index_Framework.settings import roadset
-from crontab_jobs import dadui_regions
+from crontab_jobs import dadui_regions,judge_region,judge_group
 import MySQLdb
 district_row_no = {"dongcheng":3, "xicheng":4, "chaoyang":5, "haidian":6,"fengtai":7,"shijingshan":8,"daxing":19}
 sheet_idx = {2:"dongcheng",3:"xicheng",4:"haidian",5:"chaoyang",6:"daxing",7:"shijingshan",8:"fengtai"}
@@ -15,6 +15,43 @@ MAXINT = 999999999
 LNG_INDEX = 0
 LAT_INDEX = 1
 EPS = 0.000001
+
+def import_app_incidences_from_json(input_file_path):
+    input_file = open(input_file_path,"r")
+    input_str = input_file.read().decode("utf-8")
+    json_obj = json.loads(input_str)
+    for item in json_obj:
+        lng = item[0]
+        lat = item[1]
+        address = u"未知"
+        create_time = item[3]
+        try:
+            if not isinstance(lng, unicode) or not isinstance(lat,unicode) \
+                    or not isinstance(create_time,unicode):
+                continue
+            lng = float(lng)
+            lat = float(lat)
+            create_time = datetime.datetime.strptime(create_time,"%Y-%m-%d %H:%M:%S")
+
+            #先用百度的边界查询在哪个区
+            region = judge_region(lng=lng, lat= lat)
+
+            #转换成高德坐标再存
+            point = [lng, lat]
+            lng,lat = bd2gcj(point)
+
+            # 查询在哪个大队
+            group = judge_group(lng=lng, lat= lat)
+
+            app_incidence = App_Incidence(longitude=lng, latitude=lat, place=address,
+                                          create_time=create_time, region=region, group = group)
+            app_incidence.save()
+        except Exception,e:
+            print "decode failed"
+            continue
+
+    print len(json_obj)
+    input_file.close()
 
 #从另外一个数据库中将122报警数据导入到此数据库
 
