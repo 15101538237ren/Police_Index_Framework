@@ -77,12 +77,12 @@ def save_prediction_info():
             print "testing group_id %d" % dadui_id
 
             #最大警力目前没数据,先置成100
-            police_max = 100
+            police_max = 120
             #police_max = Police.objects.filter(create_time__range=[POLICE_FROM_DT, POLICE_END_DT],group=int(dadui_id)).aggregate(Max('people_cnt'))["people_cnt__max"]
             index = region_pca[str(dadui_id)]
 
             #实际警力采用随机值
-            police_real_cnt = random.randint(50,100)
+            police_real_cnt = random.randint(50,120)
             #police_real =  Police.objects.filter(create_time=qt,group=int(dadui_id))
             #police_real_cnt = int(police_real[0].people_cnt)
             people_recommend = int((index/3.0) * police_max)

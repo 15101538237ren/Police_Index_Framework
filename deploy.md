@@ -197,3 +197,25 @@ DEBUG = FALSE
 /police/
 use police_index;
 delete from process_app_incidence where create_time between '2017/3/1' and '2017/3/1'
+
+
+重新部署
+
+1.杀掉所有python的进程
+ps -aux | grep "python"
+kill -9 上面查出的进程号列表
+
+2.rm -rf Police_Index_Framework
+
+3.上传代码包并解压
+
+4.进入Police_Index_Framework目录并一条一条执行，确保按回车之后不会出现exit
+
+nohup python manage.py runserver 0.0.0.0:8000 &
+
+nohup python manage.py celery worker --loglevel=info &
+
+nohup python manage.py celery beat &
+
+
+

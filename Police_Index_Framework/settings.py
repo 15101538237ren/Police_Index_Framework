@@ -61,7 +61,7 @@ DEBUG = True
 ALLOWED_HOSTS = []
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
-STATIC_URL = 'police/static/'
+STATIC_URL = '/police/static/'
 STATIC_ROOT = normpath(join(BASE_DIR,  'static', 'root'))
 STATICFILES_DIRS = (
     normpath(join(BASE_DIR, 'static')),
@@ -129,9 +129,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'police_index',
-        'USER': 'root' if DEPLOY else 'ren',
+        'USER': 'root' if DEPLOY else 'root',
         'PASSWORD': '' if DEPLOY else 'harry123',
-        'HOST': 'localhost' if DEPLOY else 'localhost',
+        'HOST': 'localhost' if DEPLOY else '192.168.3.119',
         'PORT': '3306',
     }
 }

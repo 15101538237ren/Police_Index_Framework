@@ -375,11 +375,11 @@ def pca(data,nRedDim=0,normalise=0):
 #获取4中类型数据的矩阵,包括预处理,Normalize
 def get_data_array(start_time, end_time, region, is_week, duration=10, is_calc_police = False, is_normalize=1,group_id = -1):
     #以下每个数据都是一个dict,键为datetime
-    app_incidence = preprocess_app_incidence(start_time, end_time, duration, region, is_week, group_id)
+    app_incidence = preprocess_app_incidence(start_time, end_time, duration, region, is_week, -1)
     print("finished get app_incidence data!")
-    violation = preprocess_violation(start_time, end_time, duration, region, is_week, group_id)
+    violation = preprocess_violation(start_time, end_time, duration, region, is_week, -1)
     print("finished get violation data!")
-    call_incidence = preprocess_call_incidence(start_time, end_time, duration, region, is_week, group_id)
+    call_incidence = preprocess_call_incidence(start_time, end_time, duration, region, is_week, -1)
     print("finished get call_incidence data!")
     crowd_index = preprocess_crowd_index(start_time,end_time,duration,region,is_week, group_id)
     print("finished get crowd_index data!")
