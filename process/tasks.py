@@ -37,7 +37,7 @@ def get_peroidic_data():
     get_call_incidence(dt_start, dt_end)
     get_violation(dt_start, dt_end)
     get_crowd_index()
-    save_prediction_info()
+    # save_prediction_info() #暂不执行,之后正常之后在执行
     return
 
 def create_task(name, task, task_args, crontab_time):

@@ -30,6 +30,11 @@
             dt_list.push("{{ dt }}");
         {% endfor %}
 
+        {% ifequal vs_time 1 %}
+            var url = "{% url 'process:vs_time' %}";
+        {% else %}
+            var url = "{% url 'process:query_status' %}";
+        {% endifequal %}
         function get_dt(idx)
         {
             return dt_list[idx];
@@ -43,15 +48,19 @@
                     xhr.setRequestHeader("X-CSRFToken", '{{ csrf_token }}');
                 }
             });
-            var is_group = -1;
+
             {% ifequal is_group 1 %}
-                is_group = 1;
+                var is_group = 1;
+            {% else %}
+                var is_group = -1;
             {% endifequal %}
             $.ajax({
                 type: "POST",
-                url: "{% url 'process:query_status' %}?is_group="+is_group+"&query_dt="+dt_now,
+                url: url+"?is_group="+is_group+"&query_dt="+dt_now,
                 success: function (result) {
                     if (result["code"] == 0) {
+                        region_colors = new Array();
+                        region_labels = new Array();
                         for(i=0;i<district_ids.length;i++)
                         {
                             var district_id = district_ids[i];

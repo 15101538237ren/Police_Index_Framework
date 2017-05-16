@@ -57,6 +57,7 @@ SECRET_KEY = 'hzwc@ti@_kfpvl@-jeh=8v4c7tfe30r@t&poho=a00-b)=0b6o'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+DEPLOY = False
 
 ALLOWED_HOSTS = []
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
@@ -121,9 +122,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'Police_Index_Framework.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/1.8/ref/settings/#databases
-DEPLOY = False
+
 
 DATABASES = {
     'default': {
@@ -131,7 +130,7 @@ DATABASES = {
         'NAME': 'police_index',
         'USER': 'root' if DEPLOY else 'root',
         'PASSWORD': '' if DEPLOY else 'harry123',
-        'HOST': 'localhost' if DEPLOY else '192.168.3.119',
+        'HOST': 'localhost' if DEPLOY else 'localhost',#192.168.3.119',
         'PORT': '3306',
     }
 }
