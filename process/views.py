@@ -159,7 +159,7 @@ def index(request):
 def realtime_index(request):
 
     now_time_dt = datetime.datetime.now()
-    now_time = now_time_dt.strftime("%H:%M:%S")
+    now_time = now_time_dt.strftquery_statusime("%H:%M:%S")
     year = 2017
     month = 2
     is_region = 1
