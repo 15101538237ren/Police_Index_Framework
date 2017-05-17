@@ -375,11 +375,11 @@ def pca(data,nRedDim=0,normalise=0):
 #获取4中类型数据的矩阵,包括预处理,Normalize
 def get_data_array(start_time, end_time, region, is_week, duration=10, is_calc_police = False, is_normalize=1,group_id = -1):
     #以下每个数据都是一个dict,键为datetime
-    app_incidence = preprocess_app_incidence(start_time, end_time, duration, region, is_week, -1)
+    app_incidence = preprocess_app_incidence(start_time, end_time, duration, region, is_week,group_id) #-1)
     print("finished get app_incidence data!")
-    violation = preprocess_violation(start_time, end_time, duration, region, is_week, -1)
+    violation = preprocess_violation(start_time, end_time, duration, region, is_week, group_id) #-1)
     print("finished get violation data!")
-    call_incidence = preprocess_call_incidence(start_time, end_time, duration, region, is_week, -1)
+    call_incidence = preprocess_call_incidence(start_time, end_time, duration, region, is_week, group_id) #-1)
     print("finished get call_incidence data!")
     crowd_index = preprocess_crowd_index(start_time,end_time,duration,region,is_week, group_id)
     print("finished get crowd_index data!")
@@ -650,9 +650,17 @@ def getDataFromeTime(query_time, region, duration=10, group_id = -1):
     return [start_time, end_time, get_data_array(start_time, end_time, region, is_week=0, duration=duration, is_calc_police=False, is_normalize=0,group_id=group_id)]
 #根据数据和训练的参数,获取标准化到0-1的pca分数(PCA_norm)以及各项分指数的值
 def get_pca_norm_and_partial_pca_val(data_array, train_parameter, INDEX_RANGE = 3):
-    normed_data_min_list = [float(train_parameter.xmin), float(train_parameter.ymin), float(train_parameter.zmin), float(train_parameter.wmin)]
-    normed_data_list = [float(train_parameter.xmax - train_parameter.xmin), float(train_parameter.ymax - train_parameter.ymin),
-                        float(train_parameter.zmax - train_parameter.zmin), float(train_parameter.wmax - train_parameter.wmin)]
+    # normed_data_min_list = [float(train_parameter.xmin), float(train_parameter.ymin), float(train_parameter.zmin), float(train_parameter.wmin)]
+    # normed_data_list = [float(train_parameter.xmax - train_parameter.xmin), float(train_parameter.ymax - train_parameter.ymin),
+    #                     float(train_parameter.zmax - train_parameter.zmin), float(train_parameter.wmax - train_parameter.wmin)]
+
+    normed_data_min_list = [float(train_parameter.zmin), float(train_parameter.ymin), float(train_parameter.wmin), float(train_parameter.xmin)]
+    normed_data_list = [float(train_parameter.zmax - train_parameter.zmin), float(train_parameter.ymax - train_parameter.ymin),
+                        float(train_parameter.wmax - train_parameter.wmin), float(train_parameter.xmax - train_parameter.xmin)]
+    normed_data_list = [1.0 if math.fabs(item) < 0.0000000001 else item for item in normed_data_list]
+
+    normed_data_list[3] = 3.0
+
     normed_data_min = np.transpose(np.matrix(normed_data_min_list))  ##利用转置变成4*1的矩阵
     normed_data_range = np.transpose(np.matrix(normed_data_list))
     if normed_data_range.all()!=0:
@@ -660,7 +668,8 @@ def get_pca_norm_and_partial_pca_val(data_array, train_parameter, INDEX_RANGE = 
     else:
         normed_data_array = (data_array - normed_data_min)
     PCA_NO = 0
-    evecs = [float(train_parameter.cx), float(train_parameter.cy), float(train_parameter.cz), float(train_parameter.cw)]
+    # evecs = [float(train_parameter.cx), float(train_parameter.cy), float(train_parameter.cz), float(train_parameter.cw)]
+    evecs = [float(train_parameter.cz), float(train_parameter.cy), float(train_parameter.cw), float(train_parameter.cx)]
     if all(evecs < np.zeros(len(evecs))):
         evecs = evecs * -1
     evecs_arr = np.array(evecs)

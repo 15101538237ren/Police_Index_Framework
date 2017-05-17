@@ -209,7 +209,9 @@ kill -9 上面查出的进程号列表
 
 3.上传代码包并解压
 
-4.进入Police_Index_Framework目录并一条一条执行，确保按回车之后不会出现exit
+4.进入Police_Index_Framework目录并一条一条执行
+python manage.py runserver 0.0.0.0:8000
+
 
 nohup python manage.py runserver 0.0.0.0:8000 &
 

@@ -108,13 +108,13 @@ def dump_index_of(dt):
     print "finish dump_index_of %s" % dt.strftime("%Y-%m-%d %H:%M:%S")
     return data_list
 def pre_dump_all_index_result():
-    info_count = Prediction_Info.objects.count()
+    dt_start = datetime.datetime.strptime("2017-02-28 00:00:00","%Y-%m-%d %H:%M:%S")
+    dt_end = datetime.datetime.strptime("2017-03-01 00:00:00","%Y-%m-%d %H:%M:%S")
+    info_count = Prediction_Info.objects.filter(create_time__range=[dt_start,dt_end]).count()
     print "info count %d" % info_count
     if info_count != 2736:
         Prediction_Info.objects.all().delete()
         print "delete all Prediction_Info objs"
-        dt_start = datetime.datetime.strptime("2017-02-28 00:00:00","%Y-%m-%d %H:%M:%S")
-        dt_end = datetime.datetime.strptime("2017-03-01 00:00:00","%Y-%m-%d %H:%M:%S")
         dt_tmp = dt_start
         interval_minutes = 10
         while dt_tmp < dt_end:
@@ -184,7 +184,7 @@ def visulization_of_time(request):
         dadui_id = int(data["id"].split("_")[1])
         rindex = float(data["index"])
         region_or_dadui_name = data["name"]
-        label = region_or_dadui_name + u":" + str(rindex) +u"<br/> 实际警力:"+str(data["real_police_cnt"])+u"<br/>建议警力:"+str(data["suggested_police_cnt"])+u"<br/>事故分指数:"+str(data["accidents_index"])+u"<br/>拥堵延时分指数:"+str(data["crowd_index"])+u"<br/>违法分指数:"+str(data["violation_index"])
+        label = region_or_dadui_name#+ u":" + str(rindex) +u"<br/> 实际警力:"+str(data["real_police_cnt"])+u"<br/>建议警力:"+str(data["suggested_police_cnt"])+u"<br/>事故分指数:"+str(data["accidents_index"])+u"<br/>拥堵延时分指数:"+str(data["crowd_index"])+u"<br/>违法分指数:"+str(data["violation_index"])
         region_pca[str(dadui_id)] = int(rindex * 100)
         region_labels[str(dadui_id)]= label
     for k,v in region_labels.items():
@@ -317,9 +317,9 @@ def dadui_visualize(request):
     # get_peroidic_data()
     # generate_all_dadui_crowd_index(dt_start,dt_end)
     # input_crowd_file_path = "/Users/Ren/PycharmProjects/PoliceIndex/beijing_data/2016_crowd.xlsx"
-    output_file_path = "/Users/Ren/PycharmProjects/Police_Index_Framework/static/js/dadui_data.js"
+    # output_file_path = "/Users/Ren/PycharmProjects/Police_Index_Framework/static/js/dadui_data.js"
     # wrt_data_to_js(output_file_path)
-    generate_datajs_dadui(output_file_path)
+    # generate_datajs_dadui(output_file_path)
     # import_crowd_data(input_crowd_file_path=input_crowd_file_path)
     return render_to_response('process/index.html', locals(), context_instance=RequestContext(request))
 
@@ -336,7 +336,7 @@ def index(request):
     week_agg = 0
     #按大队训练和测试
     is_group = 1
-    vs_time = 1
+    vs_time = 0
     from_dt = datetime.datetime(year,month,1,0,0,0,0)
     if month !=12:
         end_dt = datetime.datetime(year,month+1,1,0,0,0,0)

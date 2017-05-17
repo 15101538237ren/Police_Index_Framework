@@ -19,6 +19,11 @@
         function get_region_color(region_id)
         {
             return region_colors[region_id];
+{#            return  '#' +#}
+{#                    (function(color){#}
+{#                    return (color +=  '0123456789abcdef'[Math.floor(Math.random()*16)])#}
+{#                      && (color.length == 6) ?  color : arguments.callee(color);#}
+{#                  })('');#}
         }
         var region_labels = new Array();
         function get_region_label(region_id)
@@ -146,6 +151,7 @@
                 var polygon = new BMap.Polygon(points, {
                     strokeColor: "#FFFFFF",
                     fillColor: gradient[get_region_color(region_id)],
+{#                    fillColor: get_region_color(region_id),#}
                     strokeWeight: 1,
                     strokeOpacity: 0.5
                 });  // 初始化PointCollection
